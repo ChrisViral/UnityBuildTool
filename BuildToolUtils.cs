@@ -49,7 +49,7 @@ namespace BuildTool
             [BuildTarget.Android]             = "Android",
             [BuildTarget.iOS]                 = "iOS",
             [BuildTarget.WebGL]               = "WebGL",
-            [BuildTarget.WSAPlayer]           = "WinStore",
+            [BuildTarget.WSAPlayer]           = "WSA",
             [BuildTarget.XboxOne]             = "XboxOne",
             [BuildTarget.PS4]                 = "PS4",
             [BuildTarget.Switch]              = "Switch",
@@ -123,8 +123,18 @@ namespace BuildTool
         /// Gets the nice name for a given BuildTarget
         /// </summary>
         /// <param name="target">BuildTarget to get the name for</param>
+        /// <exception cref="NotSupportedException">The BuildTarget is not supported by the tool</exception>
         /// <returns>The nice name of this given BuildTarget</returns>
-        public static string GetBuildTargetName(BuildTarget target) => targetNames[target];
+        public static string GetBuildTargetName(BuildTarget target)
+        {
+            //Try and get the name
+            if (!targetNames.TryGetValue(target, out string name))
+            {
+                //If it fails, throw a NotSupportedException
+                throw new NotSupportedException(target + " build target is not supported by the UnityBuildTool");
+            }
+            return name;
+        }
 
         /// <summary>
         /// Gets all the BuildTargets out of a flag object
