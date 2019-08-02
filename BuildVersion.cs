@@ -181,8 +181,9 @@ namespace BuildTool
         /// </summary>
         /// <param name="bump">How to bump the version over this build</param>
         /// <param name="author">The build's author</param>
+        /// <param name="uploadURL">The URL to upload the version to if desired</param>
         /// <returns>The new version after the build</returns>
-        public void Build(VersionBump bump, string author)
+        public void Build(VersionBump bump, string author, string uploadURL = null)
         {
             //Bump the version number accordingly
             switch (bump)
@@ -207,8 +208,14 @@ namespace BuildTool
             this.BuildTime = DateTime.UtcNow;
             this.revision++;
 
-            //Finally, save the new build to the disk
+            //Save the new build to the disk
             SaveToFile();
+
+            //If the version must be uploaded, do it now
+            if (!string.IsNullOrEmpty(uploadURL))
+            {
+                JsonWebClient.PostJsonObject(uploadURL, this);
+            }
         }
 
         /// <summary>

@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using BuildTool.Extensions;
 using Octokit;
 using UnityEditor;
 using UnityEngine;
@@ -24,7 +23,6 @@ namespace BuildTool.UI
         //Owners
         private readonly ReadOnlyCollection<RepositoryOwner> owners;
         private readonly GitHubAuthenticator authenticator;
-        private readonly BuildToolWindow window;
         private Vector2 scroll;
         #endregion
 
@@ -79,13 +77,11 @@ namespace BuildTool.UI
         /// </summary>
         /// <param name="owners">Owners to select from</param>
         /// <param name="authenticator">The GitHubAuthenticator associated to this Control</param>
-        /// <param name="window">The window this selector acts on</param>
-        public RepositorySelector(IList<RepositoryOwner> owners, GitHubAuthenticator authenticator, BuildToolWindow window)
+        public RepositorySelector(IList<RepositoryOwner> owners, GitHubAuthenticator authenticator)
         {
             //Setup object
             this.owners = new ReadOnlyCollection<RepositoryOwner>(owners);
             this.authenticator = authenticator;
-            this.window = window;
 
             //Get any selected owner if there is one
             this.selectedOwner = this.owners.SingleOrDefault(o => o.Selected != null);

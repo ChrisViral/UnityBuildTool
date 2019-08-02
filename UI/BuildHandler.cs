@@ -3,8 +3,10 @@ using System.Linq;
 using BuildTool.Extensions;
 using Octokit;
 using UnityEditor;
+using UnityEditor.AnimatedValues;
 using UnityEngine;
 using VersionBump = BuildTool.BuildVersion.VersionBump;
+using BuildAPIStatus = BuildTool.UI.BuildToolWindow.BuildAPIStatus;
 
 namespace BuildTool.UI
 {
@@ -13,16 +15,6 @@ namespace BuildTool.UI
     /// </summary>
     public class BuildHandler
     {
-        /// <summary>
-        /// The status of the connection to the webservice providing build info
-        /// </summary>
-        public enum BuildAPIStatus
-        {
-            NOT_CONNECTED = 0,
-            ERROR         = 1,
-            CONNECTED     = 2
-        }
-
         /// <summary>
         /// Struct containing all the necessary information to create a new release
         /// </summary>
@@ -88,9 +80,9 @@ namespace BuildTool.UI
         private static readonly Dictionary<BuildAPIStatus, (string, GUIStyle)> connectionStyles = new Dictionary<BuildAPIStatus, (string, GUIStyle)>(3);
 
         //GUIContent labels
+        private static readonly GUIContent useURL               = new GUIContent("Use Version Service",   "If a webservice hosting the version object should be used");
         private static readonly GUIContent url                  = new GUIContent("Version URL:",          "URL of the web API where the version data is stored");
         private static readonly GUIContent connect              = new GUIContent("Connect",               "Connect to this web API to get and post build versions");
-        private static readonly GUIContent disable              = new GUIContent("Disable",               "Disable the web API connection to get and post build versions");
         private static readonly GUIContent header               = new GUIContent("New Build",             "Title of the GitHub release");
         private static readonly GUIContent descriptionLabel     = new GUIContent("Description",           "Description of the GitHub release (Markdown is supported)");
         private static readonly GUIContent branchSelector       = new GUIContent("Target",                "Branch to target");
@@ -117,29 +109,16 @@ namespace BuildTool.UI
         private readonly BuildToolWindow window;
 
         //GUI Fields
+        private readonly AnimBool urlUsed = new AnimBool(false);
         private string title, description, apiURL;
         private string[] branches;
         private int selectedBranch;
         private VersionBump bump;
-        private bool prerelease, draft, mustFocusURL;
+        private bool prerelease, draft;
         private Vector2 scroll;
         #endregion
 
         #region Properties
-        private BuildAPIStatus apiStatus = BuildAPIStatus.NOT_CONNECTED;
-        /// <summary>
-        /// Status of the connection to the build webservice
-        /// </summary>
-        public BuildAPIStatus APIStatus
-        {
-            get => this.apiStatus;
-            set
-            {
-                this.apiStatus = value;
-                this.mustFocusURL = value == BuildAPIStatus.ERROR;
-            }
-        }
-
         /// <summary>
         /// The last commit of the currently selected branch
         /// </summary>
@@ -156,6 +135,8 @@ namespace BuildTool.UI
             //Set base stuff
             this.window = window;
             this.apiURL = this.window.Settings.VersionURL ?? string.Empty;
+            this.urlUsed.value = window.Settings.UseWebService;
+            this.urlUsed.valueChanged.AddListener(window.Repaint);
 
             //Try to get the build if there is a valid URL
             if (!string.IsNullOrEmpty(this.apiURL)) { this.window.GetBuild(); }
@@ -252,44 +233,34 @@ namespace BuildTool.UI
             //Make sure styles are initiated
             InitStyles();
 
-            //Get URL
-            EditorGUIUtility.labelWidth = 105f;
-            GUI.SetNextControlName(nameof(this.apiURL));
-            this.apiURL = EditorGUILayout.TextField(url, this.apiURL);
-            EditorGUIUtility.labelWidth = 0f;
-            EditorGUILayout.BeginHorizontal();
-            //URL focus
-            if (this.mustFocusURL)
+            //Fade group
+            this.urlUsed.target = EditorGUILayout.ToggleLeft(useURL, this.urlUsed.target);
+            this.window.SerializedSettings.FindProperty(BuildToolSettings.USE_WEB_SERVICE_NAME).boolValue = this.urlUsed.target;
+            if (EditorGUILayout.BeginFadeGroup(this.urlUsed.faded))
             {
-                this.mustFocusURL = false;
-                GUI.FocusControl(nameof(this.apiURL));
-            }
-            //Display coloured connection label
-            (string label, GUIStyle style) = connectionStyles[this.APIStatus];
-            EditorGUILayout.LabelField(label, style, GUILayout.Width(101f));
-            //Disable connection when the URL hasn't changed
-            GUI.enabled = this.apiURL != this.window.Settings.VersionURL && this.window.UIEnabled;
-            if (GUILayout.Button(string.IsNullOrEmpty(this.apiURL) ? disable : connect))
-            {
-                //Set on the serialized property
-                this.window.SerializedSettings.FindProperty(BuildToolSettings.VERSION_URL_NAME).stringValue = this.apiURL;
-                //If empty, disable the connection
-                if (string.IsNullOrEmpty(this.apiURL))
+                //Get URL
+                EditorGUIUtility.labelWidth = 105f;
+                this.apiURL = EditorGUILayout.TextField(url, this.apiURL);
+                EditorGUIUtility.labelWidth = 0f;
+                EditorGUILayout.BeginHorizontal();
+
+                //Display coloured connection label
+                (string label, GUIStyle style) = connectionStyles[this.window.APIStatus];
+                EditorGUILayout.LabelField(label, style, GUILayout.Width(101f));
+                //Disable connection when the URL hasn't changed
+                GUI.enabled = !string.IsNullOrEmpty(this.apiURL) && this.apiURL != this.window.Settings.VersionURL && this.window.UIEnabled;
+                if (GUILayout.Button(connect))
                 {
-                    //Removing API connection
-                    this.Log("Removing API connection");
-                    this.APIStatus = BuildAPIStatus.NOT_CONNECTED;
-                }
-                else
-                {
+                    //Set on the serialized property
+                    this.window.SerializedSettings.FindProperty(BuildToolSettings.VERSION_URL_NAME).stringValue = this.apiURL;
                     //Try to get the build
                     this.Log("Testing connection to " + this.apiURL);
                     this.window.GetBuild();
                 }
+                GUI.enabled = this.window.UIEnabled;
+                EditorGUILayout.EndHorizontal();
             }
-            EditorGUILayout.EndHorizontal();
-
-            GUI.enabled = this.window.UIEnabled;
+            EditorGUILayout.EndFadeGroup();
         }
 
         /// <summary>

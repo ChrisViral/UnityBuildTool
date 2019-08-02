@@ -385,7 +385,7 @@ namespace BuildTool
             owners.Sort();
 
             //Create selector and get selected repository if any
-            this.Selector = new RepositorySelector(owners, this, this.window);
+            this.Selector = new RepositorySelector(owners, this);
             SetBuildRepository();
 
             //Set fetch flag and repaint the UI
@@ -451,11 +451,11 @@ namespace BuildTool
             //Set progressbar stuff
             this.window.progressTitle = "GitHub Release";
             this.window.status = "Creating Tag";
-            this.window.total = targets.Length + 3;
+            this.window.total = targets.Length + 2;
             this.window.current = 0;
 
             //Create new Tag
-            NewTag tag = new NewTag
+            NewTag newTag = new NewTag
             {
                 Message = snapshot.title,
                 Tag = version.VersionString,
@@ -464,17 +464,7 @@ namespace BuildTool
                 Tagger = new Committer(this.Name, this.Email, version.BuildTime)
             };
             //Send tag to GitHub
-            Task<GitTag> result = this.client.Git.Tag.Create(this.CurrentRepository.Id, tag);
-            //Check for cancellation
-            token.ThrowIfCancellationRequested();
-
-            //Progressbar update
-            this.window.status = "Uploading version object";
-            this.window.current++;
-
-            //In the meanwhile, send version to webservice if necessary
-            string url = this.window.Settings.VersionURL;
-            if (!string.IsNullOrEmpty(url)) { await JsonWebClient.PostJsonObject(url, version); }
+            GitTag tag = await this.client.Git.Tag.Create(this.CurrentRepository.Id, newTag);
             //Check for cancellation
             token.ThrowIfCancellationRequested();
 
@@ -483,7 +473,7 @@ namespace BuildTool
             this.window.current++;
 
             //Create new release
-            NewRelease release = new NewRelease((await result).Tag)
+            NewRelease newRelease = new NewRelease(tag.Tag)
             {
                 Name = snapshot.title,
                 Body = snapshot.description,
@@ -492,8 +482,8 @@ namespace BuildTool
                 Draft = snapshot.draft
             };
             //Send new release
-            Release gitRelease = await this.client.Repository.Release.Create(this.CurrentRepository.Id, release);
-            this.Log("Release created: " + gitRelease.Name);
+            Release release = await this.client.Repository.Release.Create(this.CurrentRepository.Id, newRelease);
+            this.Log("Release created: " + release.Name);
             //Check for cancellation
             token.ThrowIfCancellationRequested();
             //Progressbar update
@@ -510,7 +500,7 @@ namespace BuildTool
                 string path = Path.Combine(buildsFolder, fileName);
                 using (FileStream zipStream = File.OpenRead(path))
                 {
-                    await this.client.Repository.Release.UploadAsset(gitRelease, new ReleaseAssetUpload(fileName, "application/zip", zipStream, null));
+                    await this.client.Repository.Release.UploadAsset(release, new ReleaseAssetUpload(fileName, "application/zip", zipStream, null));
                 }
                 this.Log("Uploaded asset: " + path);
 

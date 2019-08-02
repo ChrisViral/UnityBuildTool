@@ -57,7 +57,7 @@ namespace BuildTool
         /// <typeparam name="T">Type of object to put</typeparam>
         /// <param name="url">Request URL</param>
         /// <param name="obj">The object to put</param>
-        public static async Task PostJsonObject<T>(string url, T obj)
+        public static async void PostJsonObject<T>(string url, T obj)
         {
             try
             {

@@ -23,6 +23,10 @@ namespace BuildTool
         /// </summary>
         public const string BUILD_REPOSITORY_NAME  = nameof(buildRepository);
         /// <summary>
+        /// Name of the UseWebService SerializedProperty
+        /// </summary>
+        public const string USE_WEB_SERVICE_NAME   = nameof(useWebService);
+        /// <summary>
         /// Name of the VersionURL SerializedProperty
         /// </summary>
         public const string VERSION_URL_NAME       = nameof(versionURL);
@@ -55,6 +59,13 @@ namespace BuildTool
         /// The last used build repository
         /// </summary>
         public string BuildRepository => this.buildRepository;
+
+        [SerializeField]
+        private bool useWebService;
+        /// <summary>
+        /// If a BuildVersion web service is used
+        /// </summary>
+        public bool UseWebService => this.useWebService;
 
         [SerializeField]
         private string versionURL = string.Empty;

@@ -7,7 +7,6 @@ using BuildTool.Extensions;
 using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
-using BuildAPIStatus = BuildTool.UI.BuildHandler.BuildAPIStatus;
 
 namespace BuildTool.UI
 {
@@ -16,6 +15,16 @@ namespace BuildTool.UI
     /// </summary>
     public class BuildToolWindow : EditorWindow
     {
+        /// <summary>
+        /// The status of the connection to the webservice providing build info
+        /// </summary>
+        public enum BuildAPIStatus
+        {
+            NOT_CONNECTED = 0,
+            ERROR         = 1,
+            CONNECTED     = 2
+        }
+
         #region Constants
         /// <summary>
         /// Window title
@@ -99,6 +108,16 @@ namespace BuildTool.UI
         /// Checks if the build task exists and is currently running
         /// </summary>
         private bool BuildTaskRunning => this.buildTask != null && !this.buildTask.IsCanceled && !this.buildTask.IsFaulted && !this.buildTask.IsCompleted;
+
+        private BuildAPIStatus apiStatus = BuildAPIStatus.NOT_CONNECTED;
+        /// <summary>
+        /// Status of the connection to the build webservice
+        /// </summary>
+        public BuildAPIStatus APIStatus
+        {
+            get => this.settings.UseWebService ? this.apiStatus : BuildAPIStatus.NOT_CONNECTED;
+            private set => this.apiStatus = value;
+        }
         #endregion
 
         #region Static methods
@@ -164,12 +183,12 @@ namespace BuildTool.UI
             this.BuildVersion = await JsonWebClient.GetJsonObject<BuildVersion>(this.Settings.VersionURL);
             if (this.BuildVersion != null)
             {
-                this.buildHandler.APIStatus = BuildAPIStatus.CONNECTED;
+                this.APIStatus = BuildAPIStatus.CONNECTED;
                 this.Log($"Reply:\n{JsonConvert.SerializeObject(this.BuildVersion, Formatting.Indented)}");
             }
             else
             {
-                this.buildHandler.APIStatus = BuildAPIStatus.ERROR;
+                this.APIStatus = BuildAPIStatus.ERROR;
                 this.LogError("Build version could not be fetched successfully");
             }
             //Repaint and reenable the UI
@@ -192,7 +211,7 @@ namespace BuildTool.UI
 
             //Bump up BuildVersion
             this.snapshot = this.buildHandler;
-            this.BuildVersion.Build(this.snapshot.bump, this.Authenticator.User.Login);
+            this.BuildVersion.Build(this.snapshot.bump, this.Authenticator.User.Login, this.APIStatus == BuildAPIStatus.CONNECTED ? this.settings.VersionURL : null);
 
             //Build all then reset progressbar
             this.targets = BuildToolUtils.GetTargets(this.settings.TargetFlags).ToArray();
