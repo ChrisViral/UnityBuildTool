@@ -11,8 +11,38 @@ namespace BuildTool
     /// <summary>
     /// Build tool settings object
     /// </summary>
-    public class BuildToolSettings : ScriptableObject
+    public sealed class BuildToolSettings : ScriptableObject
     {
+        /// <summary>
+        /// Custom Inspector for this type of asset
+        /// </summary>
+        [CustomEditor(typeof(BuildToolSettings))]
+        private class BuildToolSettingsEditor : Editor
+        {
+            #region Methods
+            /// <summary>
+            /// Generate the inspector GUI
+            /// </summary>
+            public override void OnInspectorGUI()
+            {
+                //Normal property fields for everyone
+                EditorGUILayout.PropertyField(this.serializedObject.FindProperty(BUILD_REPOSITORY_NAME));
+                EditorGUILayout.PropertyField(this.serializedObject.FindProperty(USE_WEB_SERVICE_NAME));
+                EditorGUILayout.PropertyField(this.serializedObject.FindProperty(VERSION_URL_NAME));
+                EditorGUILayout.PropertyField(this.serializedObject.FindProperty(DEVELOPMENT_BUILD_NAME));
+                EditorGUILayout.PropertyField(this.serializedObject.FindProperty(PUBLISH_RELEASE_NAME));
+                EditorGUILayout.PropertyField(this.serializedObject.FindProperty(OUTPUT_FOLDER_NAME));
+                //Except for the flags on
+                SerializedProperty flags = this.serializedObject.FindProperty(TARGET_FLAGS_NAME);
+                flags.intValue = (int)(BuildTargetFlags)EditorGUILayout.EnumFlagsField("Target Flags", (BuildTargetFlags)flags.intValue);
+                //And back to normal
+                EditorGUILayout.PropertyField(this.serializedObject.FindProperty(COPY_ON_BUILD_NAME), true);
+                //Apply everything
+                this.serializedObject.ApplyModifiedProperties();
+            }
+            #endregion
+        }
+
         #region Constants
         /// <summary>
         /// Settings file name
