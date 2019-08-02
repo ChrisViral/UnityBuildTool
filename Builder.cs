@@ -18,8 +18,9 @@ namespace BuildTool
         /// </summary>
         /// <param name="settings">The settings to build for</param>
         /// <param name="targets">Targets to build for</param>
+        /// <param name="success">An array containing the success of each build</param>
         /// <param name="resetTarget">If the buildTarget should be reset at the end of the build</param>
-        public static void BuildAll(BuildToolSettings settings, BuildTarget[] targets, bool resetTarget = true)
+        public static void BuildAll(BuildToolSettings settings, BuildTarget[] targets, out bool[] success, bool resetTarget = true)
         {
             //Get original info in main thread
             BuildTarget originalTarget = EditorUserBuildSettings.activeBuildTarget;
@@ -27,6 +28,7 @@ namespace BuildTool
             //Progressbar
             int current = 0;
             float total = targets.Length;
+            success = new bool[targets.Length];
             foreach (BuildTarget target in targets)
             {
                 if (EditorUtility.DisplayCancelableProgressBar("Building Player", "Building " + BuildToolUtils.GetBuildTargetName(target), current / total))
@@ -38,6 +40,7 @@ namespace BuildTool
                 try
                 {
                     Build(settings, target);
+                    success[current] = true;
                 }
                 catch (BuildFailedException e)
                 {

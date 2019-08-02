@@ -196,13 +196,13 @@ namespace BuildTool.UI
 
             //Build all then reset progressbar
             this.targets = BuildToolUtils.GetTargets(this.settings.TargetFlags).ToArray();
-            Builder.BuildAll(this.Settings, this.targets, false);
+            Builder.BuildAll(this.Settings, this.targets, out bool[] success, false);
             this.originalTarget = EditorUserBuildSettings.activeBuildTarget;
 
             //Finish the build process asynchronously
             this.cancellationSource = new CancellationTokenSource();
             this.productName = PlayerSettings.productName;
-            this.buildTask = PostBuildAsync(this.cancellationSource.Token);
+            this.buildTask = PostBuildAsync(success, this.cancellationSource.Token);
             this.buildTask.ContinueWith(OnBuildProcessComplete);
             Repaint();
         }
@@ -210,21 +210,33 @@ namespace BuildTool.UI
         /// <summary>
         /// Copies necessary and creates compressed zip folder for each build target
         /// </summary>
+        /// <param name="success">Array containing the fail/pass status of each target build</param>
         /// <param name="token">CancellationToken to cancel the ongoing task</param>
-        private async Task PostBuildAsync(CancellationToken token)
+        private async Task PostBuildAsync(bool[] success, CancellationToken token)
         {
             //Get the builds folder path
             string buildsFolder = Path.Combine(BuildToolUtils.ProjectFolderPath, this.Settings.OutputFolder);
             //Get progressbar stuff
             this.current = 0;
-            this.total = this.targets.Length * (2 + this.settings.CopyOnBuild.Count);
+            int steps = 2 + this.settings.CopyOnBuild.Count;
+            this.total = this.targets.Length * steps;
             //Check for cancellation
             token.ThrowIfCancellationRequested();
             //Loop through all targets
             foreach (BuildTarget target in this.targets)
             {
-                //Get stuff for this target
+                //Get target name
                 string targetName = BuildToolUtils.GetBuildTargetName(target);
+
+                //If the build has failed, ignore this target
+                if (!success[this.current])
+                {
+                    this.current += steps;
+                    this.Log($"Skipping post-build on {targetName} because the build did not succeed");
+                    continue;
+                }
+
+                //Get output folder
                 string outputDirectory = Path.Combine(buildsFolder, targetName);
                 this.progressTitle = targetName + " Post Build";
                 try
