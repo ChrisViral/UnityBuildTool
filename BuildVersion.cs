@@ -2,20 +2,21 @@
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
 using BuildTool.Extensions;
-using BuildTool.Json;
-using Newtonsoft.Json;
+using BuildTool.UI;
 using UnityEditor;
-using UnityEngine;
+
+#pragma warning disable IDE0051 //Remove unused private members
 
 namespace BuildTool
 {
     /// <summary>
     /// Game build version object
     /// </summary>
-    [JsonObject(MemberSerialization.OptIn)]
+    [DataContract]
     public class BuildVersion
     {
         /// <summary>
@@ -29,6 +30,53 @@ namespace BuildTool
             Major
         }
 
+        /// <summary>
+        /// Proxy struct to serialize a Version object correctly
+        /// </summary>
+        [DataContract]
+        private readonly struct VersionProxy
+        {
+            #region Fields
+            /// <summary>
+            /// Major version number
+            /// </summary>
+            [DataMember(IsRequired = true, Order = 0)]
+            public readonly int major;
+            /// <summary>
+            /// Minor version number
+            /// </summary>
+            [DataMember(IsRequired = true, Order = 1)]
+            public readonly int minor;
+            /// <summary>
+            /// Build version number
+            /// </summary>
+            [DataMember(IsRequired = true, Order = 2)]
+            public readonly int build;
+            /// <summary>
+            /// Revision version number
+            /// </summary>
+            [DataMember(IsRequired = true, Order = 3)]
+            public readonly int revision;
+            #endregion
+
+            #region Constructors
+            /// <summary>
+            /// Creates a new VersionProxy with the given version numbers
+            /// </summary>
+            /// <param name="major">Major version number</param>
+            /// <param name="minor">Minor version number</param>
+            /// <param name="build">Build version number</param>
+            /// <param name="revision">Revision version number</param>
+            public VersionProxy(int major, int minor, int build, int revision)
+            {
+                this.major = major;
+                this.minor = minor;
+                this.build = build;
+                this.revision = revision;
+            }
+            #endregion
+        }
+
         #region Constants
         /// <summary>
         /// File extension of the build files
@@ -37,15 +85,11 @@ namespace BuildTool
         /// <summary>
         /// The Build time format string
         /// </summary>
-        public const string TIME_FORMAT = "dd/MM/yyyy-HH:mm:ss";
+        public const string TIME_FORMAT = "dd/MM/yyyy-HH:mm:ssUTC";
         /// <summary>
         /// The regex pattern to parse the build file
         /// </summary>
-        public const string PATTERN = @"v(\d+\.\d+\.\d+\.\d+)\|([\w-]+)@(\d{2}/\d{2}/\d{4}-\d{2}:\d{2}:\d{2})UTC";
-        /// <summary>
-        /// Path to the version file on the disk
-        /// </summary>
-        public static readonly string FilePath = Path.Combine(Directory.GetParent(Application.dataPath).FullName, PlayerSettings.productName.ToLowerInvariant() + EXTENSION);
+        public const string PATTERN = @"v(\d+\.\d+\.\d+\.\d+)\|([\w-]+)@(\d{2}/\d{2}/\d{4}-\d{2}:\d{2}:\d{2}UTC)";
         #endregion
 
         #region Fields
@@ -57,20 +101,35 @@ namespace BuildTool
         /// <summary>
         /// Version number of the build
         /// </summary>
-        [JsonProperty("version", Required = Required.Always, Order = 0), JsonConverter(typeof(VersionConverter))]
         public Version Version
         {
             get => new Version(this.major, this.minor, this.build, this.revision);
-            set
+            private set
             {
-                //Check for null
-                if (value is null) { throw new ArgumentNullException(nameof(value), "Cannot set null version"); }
+                //Check if null
+                if (value is null) { throw new ArgumentNullException(nameof(value), "Assigned Version cannot be null"); }
 
-                //Set the individual values
+                //Assign values individually
                 this.major = value.Major;
                 this.minor = value.Minor;
-                this.build = value.Build;
+                this.build = value.Minor;
                 this.revision = value.Revision;
+            }
+        }
+
+        /// <summary>
+        /// Proxy version object to get and set the version in the Json correctly
+        /// </summary>
+        [DataMember(Name = "version", IsRequired = true, Order = 0)]
+        private VersionProxy TempVersion
+        {
+            get => new VersionProxy(this.major, this.minor, this.build, this.revision);
+            set
+            {
+                this.major = value.major;
+                this.minor = value.minor;
+                this.build = value.build;
+                this.revision = value.revision;
             }
         }
 
@@ -82,7 +141,7 @@ namespace BuildTool
         /// <summary>
         /// Date and time of the build
         /// </summary>
-        [JsonProperty("build_time", Required =  Required.Always, Order = 1), JsonConverter(typeof(VersionDateConverter))]
+        [DataMember(Name = "build_time", IsRequired = true, Order = 1)]
         public DateTime BuildTime { get; private set; }
 
         /// <summary>
@@ -93,7 +152,7 @@ namespace BuildTool
         /// <summary>
         /// Author of the build
         /// </summary>
-        [JsonProperty("author", Required =  Required.Always, Order = 2)]
+        [DataMember(Name = "author", IsRequired = true, Order = 2)]
         public string Author { get; private set; }
         #endregion
 
@@ -101,7 +160,6 @@ namespace BuildTool
         /// <summary>
         /// Prevents instantiation
         /// </summary>
-        [JsonConstructor]
         private BuildVersion() { }
         #endregion
 
@@ -116,13 +174,13 @@ namespace BuildTool
             BuildVersion build = new BuildVersion();
 
             //Check if file exists
-            if (!File.Exists(FilePath)) { build.Log("Version file could not be found"); }
+            if (!File.Exists(BuildToolWindow.BuildFilePath)) { build.Log("Version file could not be found"); }
             else
             {
                 try
                 {
                     //Read version info from file
-                    string[] data = Regex.Match(File.ReadAllText(FilePath, Encoding.ASCII).Trim(), PATTERN)
+                    string[] data = Regex.Match(File.ReadAllText(BuildToolWindow.BuildFilePath, Encoding.ASCII).Trim(), PATTERN)
                                          .Groups.Cast<Group>()
                                          .Skip(1)  //First group is always the entire match
                                          .Select(g => g.Captures[0].Value)
@@ -208,8 +266,8 @@ namespace BuildTool
             this.BuildTime = DateTime.UtcNow;
             this.revision++;
 
-            //Set the version in Unity
-            PlayerSettings.bundleVersion = this.VersionString;
+            //Set the version in Unity (without the v)
+            PlayerSettings.bundleVersion = $"{this.major}.{this.minor}.{this.build}.{this.revision}";
 
             //Save the new build to the disk
             SaveToFile();
@@ -217,20 +275,33 @@ namespace BuildTool
             //If the version must be uploaded, do it now
             if (!string.IsNullOrEmpty(uploadURL))
             {
-                JsonWebClient.PostJsonObject(uploadURL, this);
+                BuildVersionWebClient.PostBuildVersion(uploadURL, this);
             }
         }
 
         /// <summary>
         /// Saves this BuildVersion to the disk
         /// </summary>
-        public void SaveToFile() => File.WriteAllText(FilePath, ToString(), Encoding.ASCII);
+        public void SaveToFile() => File.WriteAllText(BuildToolWindow.BuildFilePath, ToString(), Encoding.ASCII);
 
         /// <summary>
         ///A string version of the build
         /// </summary>
         /// <returns></returns>
-        public override string ToString() => $"{this.VersionString}|{this.Author}@{this.NowDateString}UTC";
+        public override string ToString() => $"{this.VersionString}|{this.Author}@{this.NowDateString}";
+
+        /// <summary>
+        /// Gets an info string from the BuildVersion
+        /// </summary>
+        /// <returns>Nicely formatted info string string</returns>
+        public string InfoString()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("Version: " + this.VersionString);
+            sb.AppendLine("Build Time: " + this.BuildTime.ToString(TIME_FORMAT, CultureInfo.InvariantCulture));
+            sb.AppendLine("Author: " + this.Author);
+            return sb.ToString();
+        }
         #endregion
     }
 }
