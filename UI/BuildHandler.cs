@@ -139,7 +139,7 @@ namespace BuildTool.UI
             this.urlUsed.valueChanged.AddListener(window.Repaint);
 
             //Try to get the build if there is a valid URL
-            if (!string.IsNullOrEmpty(this.apiURL)) { this.window.GetBuild(); }
+            if (this.window.Settings.UseWebService) { this.window.GetBuild(); }
             //Else get it from the file
             else { this.window.GetBuildFromFile(); }
         }
@@ -239,17 +239,18 @@ namespace BuildTool.UI
             if (EditorGUILayout.BeginFadeGroup(this.urlUsed.faded))
             {
                 //Get URL
-                EditorGUIUtility.labelWidth = 105f;
-                this.apiURL = EditorGUILayout.TextField(url, this.apiURL);
+                EditorGUI.indentLevel++;
+                EditorGUIUtility.labelWidth = 95f;
+                this.apiURL = EditorGUILayout.TextField(url, this.apiURL, GUILayout.Width(426f));
                 EditorGUIUtility.labelWidth = 0f;
                 EditorGUILayout.BeginHorizontal();
 
                 //Display coloured connection label
                 (string label, GUIStyle style) = connectionStyles[this.window.APIStatus];
-                EditorGUILayout.LabelField(label, style, GUILayout.Width(101f));
+                EditorGUILayout.LabelField(label, style, GUILayout.Width(91f));
                 //Disable connection when the URL hasn't changed
                 GUI.enabled = !string.IsNullOrEmpty(this.apiURL) && this.apiURL != this.window.Settings.VersionURL && this.window.UIEnabled;
-                if (GUILayout.Button(connect))
+                if (GUILayout.Button(connect, GUILayout.Width(331f)))
                 {
                     //Set on the serialized property
                     this.window.SerializedSettings.FindProperty(BuildToolSettings.VERSION_URL_NAME).stringValue = this.apiURL;
@@ -259,6 +260,7 @@ namespace BuildTool.UI
                 }
                 GUI.enabled = this.window.UIEnabled;
                 EditorGUILayout.EndHorizontal();
+                EditorGUI.indentLevel--;
             }
             EditorGUILayout.EndFadeGroup();
         }
@@ -301,7 +303,7 @@ namespace BuildTool.UI
             EditorGUILayout.BeginHorizontal();
             GUI.enabled = this.window.UIEnabled && this.window.Settings.PublishRelease;
             //Branch selector
-            EditorGUIUtility.labelWidth = 50f;
+            EditorGUIUtility.labelWidth = 45f;
             this.selectedBranch = EditorGUILayout.Popup(branchSelector, this.selectedBranch, this.branches, GUILayout.Width(175f));
             //Repository label
             EditorGUIUtility.labelWidth = 15f;
@@ -356,7 +358,7 @@ namespace BuildTool.UI
             //Target flags selection
             prop.intValue = (int)(BuildTargetFlags)EditorGUILayout.EnumFlagsField(buildTargetsLabel, (BuildTargetFlags)prop.intValue, GUILayout.Width(375f));
             EditorGUIUtility.labelWidth = 0f;
-            GUILayout.Space(40f);
+            GUILayout.Space(57f);
             //Build button
             GUI.backgroundColor = BuildToolUtils.Green;
             if (GUILayout.Button(buildButton, buildButtonStyle, GUILayout.Height(60f), GUILayout.Width(375f)))
@@ -411,6 +413,7 @@ namespace BuildTool.UI
             if (toDelete != -1) { prop.DeleteArrayElementAtIndex(toDelete); }
 
             EditorGUILayout.EndScrollView();
+            GUILayout.Space(5f);
             EditorGUILayout.BeginHorizontal();
             GUILayout.Space(4f);
             //Add file browser
@@ -441,10 +444,10 @@ namespace BuildTool.UI
             }
             GUILayout.Space(12f);
             EditorGUILayout.EndHorizontal();
+            GUILayout.Space(15f);
             EditorGUILayout.EndVertical();
 
             EditorGUILayout.EndHorizontal();
-            GUILayout.Space(10f);
             EditorGUILayout.EndVertical();
         }
         #endregion

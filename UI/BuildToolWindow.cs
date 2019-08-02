@@ -53,6 +53,7 @@ namespace BuildTool.UI
                 return refreshButtonStyle ?? (refreshButtonStyle = new GUIStyle(GUI.skin.button)
                 {
                     fontStyle = FontStyle.Bold,
+                    fontSize = 16,
                     normal = { textColor = BuildToolUtils.Green },
                     active = { textColor = BuildToolUtils.Green }
                 });
@@ -118,6 +119,11 @@ namespace BuildTool.UI
             get => this.settings.UseWebService ? this.apiStatus : BuildAPIStatus.NOT_CONNECTED;
             private set => this.apiStatus = value;
         }
+
+        /// <summary>
+        /// If a valid API connection has been made
+        /// </summary>
+        public bool APIConnected => this.APIStatus == BuildAPIStatus.CONNECTED && !string.IsNullOrEmpty(this.settings.VersionURL);
         #endregion
 
         #region Static methods
@@ -180,7 +186,14 @@ namespace BuildTool.UI
             this.Log("Attempting to get build from " + this.Settings.VersionURL);
 
             //Try to get the build from the webservice
-            this.BuildVersion = await JsonWebClient.GetJsonObject<BuildVersion>(this.Settings.VersionURL);
+            try
+            {
+                this.BuildVersion = await JsonWebClient.GetJsonObject<BuildVersion>(this.Settings.VersionURL);
+            }
+            catch (Exception e)
+            {
+                this.LogException(e);
+            }
             if (this.BuildVersion != null)
             {
                 this.APIStatus = BuildAPIStatus.CONNECTED;
@@ -189,7 +202,8 @@ namespace BuildTool.UI
             else
             {
                 this.APIStatus = BuildAPIStatus.ERROR;
-                this.LogError("Build version could not be fetched successfully");
+                this.LogError("Build version could not be fetched successfully, getting from file");
+                GetBuildFromFile();
             }
             //Repaint and reenable the UI
             Repaint();
@@ -427,24 +441,25 @@ namespace BuildTool.UI
             {
                 EditorGUILayout.BeginHorizontal();
                 EditorGUILayout.BeginVertical(BuildToolUtils.BackgroundStyle, GUILayout.Width(400f));
+                EditorGUILayout.Space();
+                //API URL selection
+                this.buildHandler.URLSelector();
+                EditorGUILayout.Space();
+
+                //Repository selection GUI
+                this.Authenticator.Selector.OnGUI();
 
                 //Refresh button
+                GUILayout.FlexibleSpace();
                 EditorGUILayout.BeginHorizontal();
                 GUILayout.FlexibleSpace();
-                if (GUILayout.Button(refreshButton, RefreshButtonStyle, GUILayout.Width(125f), GUILayout.Height(25f)))
+                if (GUILayout.Button(refreshButton, RefreshButtonStyle, GUILayout.Width(200f), GUILayout.Height(40f)))
                 {
                     RefreshConnection();
                     return;
                 }
                 GUILayout.FlexibleSpace();
                 EditorGUILayout.EndHorizontal();
-                EditorGUILayout.Space();
-
-                //Repository selection GUI
-                this.Authenticator.Selector.OnGUI();
-
-                //API URL selection
-                this.buildHandler.URLSelector();
                 GUILayout.Space(10f);
                 EditorGUILayout.EndVertical();
 

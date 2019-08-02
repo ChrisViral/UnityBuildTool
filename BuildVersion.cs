@@ -208,6 +208,9 @@ namespace BuildTool
             this.BuildTime = DateTime.UtcNow;
             this.revision++;
 
+            //Set the version in Unity
+            PlayerSettings.bundleVersion = this.VersionString;
+
             //Save the new build to the disk
             SaveToFile();
 
