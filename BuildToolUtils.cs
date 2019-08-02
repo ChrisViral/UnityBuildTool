@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.IO.Compression;
 using System.Threading.Tasks;
-using Ionic.Zip;
 using UnityEditor;
 using UnityEngine;
+using CompressionLevel = System.IO.Compression.CompressionLevel;
 
 namespace BuildTool
 {
@@ -298,21 +299,19 @@ namespace BuildTool
         /// <param name="path">Path to create the zip file at</param>
         /// <param name="source">Source directory to add to the zip file</param>
         /// <returns>The task associated to this zip file creation</returns>
-        public static async Task CreateZipAsync(string path, string source) => await Task.Run(() => CreateZip(path, source)).ConfigureAwait(false);
-
-        /// <summary>
-        /// Creates a new zip file at the given path, and adds the given source directory to it
-        /// </summary>
-        /// <param name="path">Path to create the zip file at</param>
-        /// <param name="source">Source directory to add to the zip file</param>
-        public static void CreateZip(string path, string source)
+        public static async Task CreateZipAsync(string path, string source)
         {
-            //Create zip file
-            using (ZipFile zip = new ZipFile(path))
+            using (ZipArchive archive = new ZipArchive(File.OpenWrite(path), ZipArchiveMode.Create, false))
             {
-                //Add directory, then save the file
-                zip.AddDirectory(source);
-                zip.Save();
+                foreach (FileInfo file in new DirectoryInfo(source).EnumerateFiles("*", SearchOption.AllDirectories))
+                {
+                    ZipArchiveEntry entry = archive.CreateEntry(GetRelativePath(file.FullName, source), CompressionLevel.Optimal);
+                    using (Stream entryStream = entry.Open())
+                    using (FileStream fileStream = file.OpenRead())
+                    {
+                        await fileStream.CopyToAsync(entryStream).ConfigureAwait(false);
+                    }
+                }
             }
         }
         #endregion
