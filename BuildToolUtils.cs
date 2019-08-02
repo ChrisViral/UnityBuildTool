@@ -149,7 +149,7 @@ namespace BuildTool
             foreach ((BuildTargetFlags flag, BuildTarget target) in targets)
             {
                 //Check for the presence of the flag
-                if ((flags & flag) == flag)
+                if ((flags & flag) != 0)
                 {
                     //Yield the target
                     yield return target;
@@ -220,16 +220,26 @@ namespace BuildTool
         {
             switch (target)
             {
-                //%appname%_Data/ for Windows and Linux
+                //%appname%_Data/ on Windows and Linux
                 case BuildTarget.StandaloneWindows64:
                 case BuildTarget.StandaloneLinux64:
                     return PlayerSettings.productName + "_Data";
 
-                //%appname%.app/Contents/ for OSX
+                //%appname%.app/Contents/ on OSX
                 case BuildTarget.StandaloneOSX:
-                    return PlayerSettings.productName + ".app/Contents";
+                    return Path.Combine(PlayerSettings.productName + ".app", "Contents");
 
-                //TODO: Probably test and figure out where to save for these
+                //%appname%/Data/ on WSA, iOS, and tvOS
+                case BuildTarget.WSAPlayer:
+                case BuildTarget.iOS:
+                case BuildTarget.tvOS:
+                    return Path.Combine(PlayerSettings.productName, "Data");
+
+                //%appname%/Build on WebGL... I think?
+                case BuildTarget.WebGL:
+                    return Path.Combine(PlayerSettings.productName, "Build");
+
+                //TODO: Probably test and figure out where to save for other targets
                 default:
                     return string.Empty;
             }

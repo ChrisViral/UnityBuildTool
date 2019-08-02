@@ -34,7 +34,15 @@ namespace BuildTool
                     Debug.LogWarning("[Builder]: Build process cancelled");
                     break;
                 }
-                Build(settings, target);
+
+                try
+                {
+                    Build(settings, target);
+                }
+                catch (BuildFailedException e)
+                {
+                    Debug.LogException(e);
+                }
                 current++;
             }
             //Make sure the progressbar is cleared
@@ -52,6 +60,7 @@ namespace BuildTool
         /// </summary>
         /// <param name="settings">Settings to build for</param>
         /// <param name="target">Target to build</param>
+        /// <exception cref="BuildFailedException">If the build failed for any reason</exception>
         public static void Build(BuildToolSettings settings, BuildTarget target)
         {
             //Get some info on the build

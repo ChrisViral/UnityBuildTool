@@ -31,6 +31,10 @@ namespace BuildTool
         /// </summary>
         public const string DEVELOPMENT_BUILD_NAME = nameof(developmentBuild);
         /// <summary>
+        /// Name of the PublishRelease SerializedProperty
+        /// </summary>
+        public const string PUBLISH_RELEASE_NAME   = nameof(publishRelease);
+        /// <summary>
         /// Name of the OutputFolder SerializedProperty
         /// </summary>
         public const string OUTPUT_FOLDER_NAME     = nameof(outputFolder);
@@ -62,9 +66,16 @@ namespace BuildTool
         [SerializeField]
         private bool developmentBuild;
         /// <summary>
-                               /// If the build to do must be a development build or not
-                               /// </summary>
+        /// If the build to do must be a development build or not
+        /// </summary>
         public bool DevelopmentBuild => this.developmentBuild;
+
+        [SerializeField]
+        private bool publishRelease = true;
+        /// <summary>
+        /// If the release should be published to GitHub or not
+        /// </summary>
+        public bool PublishRelease => this.publishRelease;
 
         [SerializeField]
         private string outputFolder = string.Empty;

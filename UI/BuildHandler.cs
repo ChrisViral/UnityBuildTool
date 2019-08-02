@@ -4,6 +4,7 @@ using BuildTool.Extensions;
 using Octokit;
 using UnityEditor;
 using UnityEngine;
+using VersionBump = BuildTool.BuildVersion.VersionBump;
 
 namespace BuildTool.UI
 {
@@ -31,7 +32,7 @@ namespace BuildTool.UI
             /// <summary>
             /// The VersionBump to apply
             /// </summary>
-            public readonly BuildVersion.VersionBump bump;
+            public readonly VersionBump bump;
             /// <summary>
             /// The title of the release
             /// </summary>
@@ -91,12 +92,13 @@ namespace BuildTool.UI
         private static readonly GUIContent connect              = new GUIContent("Connect",               "Connect to this web API to get and post build versions");
         private static readonly GUIContent disable              = new GUIContent("Disable",               "Disable the web API connection to get and post build versions");
         private static readonly GUIContent header               = new GUIContent("New Build",             "Title of the GitHub release");
-        private static readonly GUIContent bumpLabel            = new GUIContent("Bump",                  "How to bump the version number");
         private static readonly GUIContent descriptionLabel     = new GUIContent("Description",           "Description of the GitHub release (Markdown is supported)");
-        private static readonly GUIContent branchSelector       = new GUIContent("@",                     "Branch to target");
+        private static readonly GUIContent branchSelector       = new GUIContent("Target",                "Branch to target");
         private static readonly GUIContent prereleaseToggle     = new GUIContent("Pre-release",           "If this build is a pre-release");
         private static readonly GUIContent draftToggle          = new GUIContent("Draft",                 "If the GitHub release should be saved as a draft");
+        private static readonly GUIContent publishToggle        = new GUIContent("Publish Release",       "If the release should be published to GitHub or not");
         private static readonly GUIContent devBuildToggle       = new GUIContent("Development Build",     "If the player should be built by Unity as a development build");
+        private static readonly GUIContent bumpLabel            = new GUIContent("Bump",                  "How to bump the version number");
         private static readonly GUIContent outputDirectoryLabel = new GUIContent("Output Directory:",     "Local path to the directory where the output of the builds should be saved");
         private static readonly GUIContent buildTargetsLabel    = new GUIContent("Build targets:",        "Which platforms the game will be built for");
         private static readonly GUIContent buildButton          = new GUIContent("BUILD",                 "Build the game for the selected targets and release to GitHub");
@@ -107,7 +109,7 @@ namespace BuildTool.UI
         #region Static fields
         //GUI Styles
         private static bool initStyles;
-        private static GUIStyle titleStyle, titleFieldStyle, descriptionLabelStyle, descriptionFieldStyle, centeredLabelStyle, deleteButtonStyle, buildButtonStyle;
+        private static GUIStyle titleStyle, titleFieldStyle, descriptionLabelStyle, descriptionFieldStyle, centeredLabelStyle, centeredPopupStyle, deleteButtonStyle, buildButtonStyle;
         #endregion
 
         #region Fields
@@ -118,7 +120,7 @@ namespace BuildTool.UI
         private string title, description, apiURL;
         private string[] branches;
         private int selectedBranch;
-        private BuildVersion.VersionBump bump;
+        private VersionBump bump;
         private bool prerelease, draft, mustFocusURL;
         private Vector2 scroll;
         #endregion
@@ -198,6 +200,7 @@ namespace BuildTool.UI
                 };
                 descriptionFieldStyle = new GUIStyle(EditorStyles.textArea) { fontSize = 13 };
                 centeredLabelStyle = new GUIStyle(EditorStyles.boldLabel) { alignment = TextAnchor.MiddleCenter };
+                centeredPopupStyle = new GUIStyle(EditorStyles.popup) { alignment = TextAnchor.MiddleCenter };
                 deleteButtonStyle = new GUIStyle(EditorStyles.miniButton)
                 {
                     fontStyle = FontStyle.Bold,
@@ -237,7 +240,7 @@ namespace BuildTool.UI
         {
             this.title = this.description = string.Empty;
             this.selectedBranch = 0;
-            this.bump = BuildVersion.VersionBump.Revision;
+            this.bump = VersionBump.Revision;
             this.prerelease = this.draft = false;
         }
 
@@ -315,6 +318,7 @@ namespace BuildTool.UI
             EnsureBranchesLoaded();
 
             //Display the release UI
+            GUI.enabled = this.window.UIEnabled && this.window.Settings.PublishRelease;
             EditorGUILayout.BeginVertical();
             //Header
             EditorGUILayout.LabelField(header, titleStyle, GUILayout.Height(30f), GUILayout.Width(150f));
@@ -324,18 +328,12 @@ namespace BuildTool.UI
             EditorGUILayout.Space();
             EditorGUILayout.Space();
             EditorGUILayout.BeginHorizontal();
-            EditorGUIUtility.labelWidth = 40f;
-            //Version bump settings
-            this.bump = (BuildVersion.VersionBump)EditorGUILayout.EnumPopup(bumpLabel, this.bump, GUILayout.Width(110f));
-            EditorGUIUtility.labelWidth = 8f;
-            GUI.enabled = false;
-            //Version display
-            EditorGUILayout.TextField(":", this.window.BuildVersion.GetBumpedVersionString(this.bump), GUILayout.Width(90f));
-            GUI.enabled = this.window.UIEnabled;
-            EditorGUIUtility.labelWidth = 15f;
+            GUI.enabled = this.window.UIEnabled && this.window.Settings.PublishRelease;
             //Branch selector
+            EditorGUIUtility.labelWidth = 50f;
             this.selectedBranch = EditorGUILayout.Popup(branchSelector, this.selectedBranch, this.branches, GUILayout.Width(175f));
             //Repository label
+            EditorGUIUtility.labelWidth = 15f;
             EditorGUILayout.LabelField("in", this.window.Authenticator.CurrentRepository.FullName, EditorStyles.boldLabel);
             EditorGUILayout.EndHorizontal();
             EditorGUIUtility.labelWidth = 80f;
@@ -353,13 +351,24 @@ namespace BuildTool.UI
             //Prerelease/draft toggles
             this.prerelease = EditorGUILayout.ToggleLeft(prereleaseToggle, this.prerelease);
             this.draft = EditorGUILayout.ToggleLeft(draftToggle, this.draft);
+            GUI.enabled = this.window.UIEnabled;
+            //Publish toggle
+            SerializedProperty prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.PUBLISH_RELEASE_NAME);
+            prop.boolValue = EditorGUILayout.ToggleLeft(publishToggle, prop.boolValue);
             //Dev build toggle
-            SerializedProperty prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.DEVELOPMENT_BUILD_NAME);
+            prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.DEVELOPMENT_BUILD_NAME);
             prop.boolValue = EditorGUILayout.ToggleLeft(devBuildToggle, prop.boolValue);
+            //Version bump settings
+            EditorGUILayout.BeginHorizontal();
+            EditorGUIUtility.labelWidth = 110f;
+            GUI.enabled = false;
+            EditorGUILayout.TextField(bumpLabel, this.window.BuildVersion.GetBumpedVersionString(this.bump), GUILayout.Width(300f));
+            GUI.enabled = this.window.UIEnabled;
+            this.bump = (VersionBump)EditorGUILayout.EnumPopup(this.bump, centeredPopupStyle, GUILayout.Width(70f));
+            EditorGUILayout.EndHorizontal();
             EditorGUILayout.BeginHorizontal();
             //Output folder property
             prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.OUTPUT_FOLDER_NAME);
-            EditorGUIUtility.labelWidth = 110f;
             //Output folder field
             EditorGUILayout.PropertyField(prop, outputDirectoryLabel, GUILayout.Width(300f));
             //Browse button
@@ -381,9 +390,13 @@ namespace BuildTool.UI
             GUI.backgroundColor = BuildToolUtils.Green;
             if (GUILayout.Button(buildButton, buildButtonStyle, GUILayout.Height(60f), GUILayout.Width(375f)))
             {
-                if (string.IsNullOrEmpty(this.title))
+                if ((BuildTargetFlags)prop.intValue == BuildTargetFlags.None)
                 {
-                    EditorUtility.DisplayDialog("Error", "Your release needs a title!", "Okay");
+                    EditorUtility.DisplayDialog("Error", "Please select at least one target to build for", "Okay");
+                }
+                else if (this.window.Settings.PublishRelease && string.IsNullOrEmpty(this.title))
+                {
+                    EditorUtility.DisplayDialog("Error", "Your GitHub release requires a title", "Okay");
                 }
                 else
                 {

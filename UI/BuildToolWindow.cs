@@ -312,8 +312,11 @@ namespace BuildTool.UI
                 token.ThrowIfCancellationRequested();
             }
 
-            //Finish by creating GitHub release
-            await this.Authenticator.CreateNewRelease(this.BuildVersion, this.targets, this.snapshot, token);
+            if (this.settings.PublishRelease)
+            {
+                //Finish by creating GitHub release
+                await this.Authenticator.CreateNewRelease(this.BuildVersion, this.targets, this.snapshot, token);
+            }
         }
 
         /// <summary>
