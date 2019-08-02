@@ -236,6 +236,11 @@ namespace BuildTool.UI
             //Fade group
             this.urlUsed.target = EditorGUILayout.ToggleLeft(useURL, this.urlUsed.target);
             this.window.SerializedSettings.FindProperty(BuildToolSettings.USE_WEB_SERVICE_NAME).boolValue = this.urlUsed.target;
+            if (!string.IsNullOrEmpty(this.apiURL) && !this.urlUsed.target)
+            {
+                this.window.SerializedSettings.FindProperty(BuildToolSettings.VERSION_URL_NAME).stringValue = string.Empty;
+                this.apiURL = string.Empty;
+            }
             if (EditorGUILayout.BeginFadeGroup(this.urlUsed.faded))
             {
                 //Get URL
