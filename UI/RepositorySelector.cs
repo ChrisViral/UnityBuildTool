@@ -53,10 +53,24 @@ namespace BuildTool.UI
             }
         }
 
+        private Repository selectedRepository;
         /// <summary>
         /// The currently selected Repository
         /// </summary>
-        public Repository SelectedRepository => this.SelectedOwner?.Selected?.Repository;
+        public Repository SelectedRepository
+        {
+            get => this.selectedRepository;
+            set
+            {
+                //Only set if the selection has changed
+                if (value != null && this.selectedRepository != value)
+                {
+                    //Set the selection then load data on build repository
+                    this.selectedRepository = value;
+                    this.authenticator.SetBuildRepository();
+                }
+            }
+        }
         #endregion
 
         #region Constructors
@@ -96,22 +110,11 @@ namespace BuildTool.UI
                     this.SelectedOwner = owner;
                 }
             }
+
+            //Set the selected repository
+            this.SelectedRepository = this.SelectedOwner.Selected.Repository;
             EditorGUILayout.EndScrollView();
             GUILayout.FlexibleSpace();
-
-            //Select button to apply
-            EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.Space();
-            GUI.enabled = !this.authenticator.FetchingBranches && this.SelectedRepository != null && this.SelectedRepository != this.authenticator.CurrentRepository && this.window.UIEnabled;
-            if (GUILayout.Button("Select", GUILayout.Height(30f)))
-            {
-                //Set repository
-                this.Log(this.SelectedRepository?.Name);  //The conditional isn't necessary, but it calms ReSharper down
-                this.authenticator.SetBuildRepository();
-            }
-            GUI.enabled = this.window.UIEnabled;
-            EditorGUILayout.Space();
-            EditorGUILayout.EndHorizontal();
             EditorGUILayout.EndVertical();
             GUILayout.Space(20f);
         }
