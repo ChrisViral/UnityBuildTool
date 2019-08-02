@@ -31,7 +31,7 @@ namespace BuildTool
             try
             {
                 //Request to the client
-                using (HttpResponseMessage message = await client.GetAsync(url))
+                using (HttpResponseMessage message = await client.GetAsync(url).ConfigureAwait(false))
                 {
                     //Make sure no errors occured
                     message.EnsureSuccessStatusCode();
@@ -63,7 +63,7 @@ namespace BuildTool
             {
                 //Encode the content as Json
                 using (HttpContent content = new StringContent(JsonConvert.SerializeObject(obj), Encoding.UTF8, "application/json"))
-                using (HttpResponseMessage reply = await client.PostAsync(url, content))
+                using (HttpResponseMessage reply = await client.PostAsync(url, content).ConfigureAwait(false))
                 {
                     //Make sure no errors occured
                     reply.EnsureSuccessStatusCode();

@@ -258,7 +258,7 @@ namespace BuildTool
             using (FileStream destinationStream = File.OpenWrite(destination))
             {
                 //Await copy
-                await sourceStream.CopyToAsync(destinationStream);
+                await sourceStream.CopyToAsync(destinationStream).ConfigureAwait(false);
             }
         }
 
@@ -286,7 +286,7 @@ namespace BuildTool
                     using (FileStream destinationStream = File.OpenWrite(Path.Combine(outputDir, file.Name)))
                     {
                         //Await copy
-                        await sourceStream.CopyToAsync(destinationStream);
+                        await sourceStream.CopyToAsync(destinationStream).ConfigureAwait(false);
                     }
                 }
             }
@@ -298,7 +298,7 @@ namespace BuildTool
         /// <param name="path">Path to create the zip file at</param>
         /// <param name="source">Source directory to add to the zip file</param>
         /// <returns>The task associated to this zip file creation</returns>
-        public static async Task CreateZipAsync(string path, string source) => await Task.Run(() => CreateZip(path, source));
+        public static async Task CreateZipAsync(string path, string source) => await Task.Run(() => CreateZip(path, source)).ConfigureAwait(false);
 
         /// <summary>
         /// Creates a new zip file at the given path, and adds the given source directory to it

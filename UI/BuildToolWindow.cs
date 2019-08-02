@@ -319,7 +319,7 @@ namespace BuildTool.UI
                 this.status = targetName + " - Creating build zip";
                 foreach (string toDelete in Directory.EnumerateFiles(buildsFolder, $"{this.productName}_{targetName}v*.zip", SearchOption.TopDirectoryOnly))
                 {
-                    await Task.Run(() => File.Delete(toDelete), token);
+                    await Task.Run(() => File.Delete(toDelete), token).ConfigureAwait(false);
                     this.Log("Deleted old zip file " + toDelete);
                 }
 
