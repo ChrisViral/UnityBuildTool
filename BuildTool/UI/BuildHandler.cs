@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿#if !DEBUG
+using System.Collections.Generic;
 using System.Linq;
 using BuildTool.Extensions;
 using Octokit;
@@ -458,3 +459,4 @@ namespace BuildTool.UI
         #endregion
     }
 }
+#endif

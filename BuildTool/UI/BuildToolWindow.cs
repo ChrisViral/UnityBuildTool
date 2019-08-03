@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if !DEBUG
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -153,12 +154,8 @@ namespace BuildTool.UI
         private void Init()
         {
             //Load the settings file
-            this.settings = BuildToolSettings.Load();
-#if DEBUG
-            BuildFilePath = Path.Combine(BuildToolUtils.DataPath, BuildToolUtils.ProductName.ToLowerInvariant() + BuildVersion.EXTENSION);
-#else
             BuildFilePath = Path.Combine(Directory.GetParent(BuildToolUtils.DataPath).FullName, BuildToolUtils.ProductName.ToLowerInvariant() + BuildVersion.EXTENSION);
-#endif
+            this.settings = BuildToolSettings.Load();
 
             //Load all secondary objects
             RefreshConnection();
@@ -505,3 +502,4 @@ namespace BuildTool.UI
         #endregion
     }
 }
+#endif

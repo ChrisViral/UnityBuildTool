@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿#if !DEBUG
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
@@ -170,3 +171,4 @@ namespace BuildTool.UI
         #endregion
     }
 }
+#endif

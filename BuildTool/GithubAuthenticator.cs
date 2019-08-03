@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if !DEBUG
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -494,7 +495,9 @@ namespace BuildTool
             foreach (BuildTarget target in targets)
             {
                 //Progressbar update
+                #if !DEBUG
                 string fileName = $"{this.window.productName}_{BuildToolUtils.GetBuildTargetName(target)}{version.VersionString}.zip";
+                #endif
                 this.window.status = "Uploading asset " + fileName;
 
                 string path = Path.Combine(buildsFolder, fileName);
@@ -516,3 +519,4 @@ namespace BuildTool
         #endregion
     }
 }
+#endif

@@ -5,8 +5,10 @@ using System.IO;
 using System.IO.Compression;
 using System.Reflection;
 using System.Threading.Tasks;
+#if !DEBUG
 using UnityEditor;
 using UnityEngine;
+#endif
 using CompressionLevel = System.IO.Compression.CompressionLevel;
 
 namespace BuildTool
@@ -39,6 +41,7 @@ namespace BuildTool
     public static class BuildToolUtils
     {
         #region Constants
+        #if !DEBUG
         /// <summary>
         /// Dictionary giving a nice name for BuildTargets
         /// </summary>
@@ -77,10 +80,6 @@ namespace BuildTool
             (BuildTargetFlags.tvOS,     BuildTarget.tvOS)
         };
         /// <summary>
-        /// The directory separator char as a string
-        /// </summary>
-        private static readonly string separatorString = Path.DirectorySeparatorChar.ToString();
-        /// <summary>
         /// Red colour used throughout the UI
         /// </summary>
         public static readonly Color Red = new Color(0.7f, 0.1f, 0.1f);
@@ -88,6 +87,11 @@ namespace BuildTool
         /// Green colour used throughout the UI
         /// </summary>
         public static readonly Color Green = new Color(0.1f, 0.6f, 0.1f);
+        #endif
+        /// <summary>
+        /// The directory separator char as a string
+        /// </summary>
+        private static readonly string separatorString = Path.DirectorySeparatorChar.ToString();
         #endregion
 
         #region Static properties
@@ -114,6 +118,7 @@ namespace BuildTool
         /// </summary>
         public static string ProjectFolderPath { get; } = Directory.GetParent(DataPath).FullName;
 
+        #if !DEBUG
         private static GUIStyle backgroundStyle;
         /// <summary>
         /// The background style of the selection UI
@@ -136,9 +141,11 @@ namespace BuildTool
                 return backgroundStyle;
             }
         }
+        #endif
         #endregion
 
         #region Methods
+        #if !DEBUG
         /// <summary>
         /// Gets the nice name for a given BuildTarget
         /// </summary>
@@ -176,6 +183,7 @@ namespace BuildTool
                 }
             }
         }
+        #endif
 
         /// <summary>
         /// Gets the relative path to a given folder
@@ -197,6 +205,7 @@ namespace BuildTool
             return Uri.UnescapeDataString(new Uri(folder).MakeRelativeUri(new Uri(path)).ToString());
         }
 
+        #if !DEBUG
         /// <summary>
         /// Checks if a SerializedProperty contains a given value
         /// </summary>
@@ -264,6 +273,7 @@ namespace BuildTool
                     return string.Empty;
             }
         }
+        #endif
 
         /// <summary>
         /// Copies a file from a source path to a destination path asynchronously

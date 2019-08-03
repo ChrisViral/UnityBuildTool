@@ -1,3 +1,4 @@
+#if !DEBUG
 using System.IO;
 using System.Linq;
 using UnityEditor;
@@ -93,3 +94,4 @@ namespace BuildTool
         #endregion
     }
 }
+#endif
