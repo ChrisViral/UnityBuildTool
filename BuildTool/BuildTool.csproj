@@ -18,37 +18,39 @@
     <DebugSymbols>false</DebugSymbols>
     <DebugType>none</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Debug\BuildTool.xml</DocumentationFile>
+    <DocumentationFile>Debug\BuildTool.xml</DocumentationFile>
     <LangVersion>7.3</LangVersion>
+    <NoWarn>1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>none</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>..\BuildToolTest\Assets\BuildTool\Editor\</OutputPath>
     <DefineConstants>
     </DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Release\BuildTool.xml</DocumentationFile>
+    <DocumentationFile>..\BuildToolTest\Assets\BuildTool\Editor\BuildTool.xml</DocumentationFile>
     <LangVersion>7.3</LangVersion>
     <NoWarn>1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
-    <OutputPath>bin\x64\Debug\</OutputPath>
+    <OutputPath>Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <DocumentationFile>bin\Debug\BuildTool.xml</DocumentationFile>
+    <DocumentationFile>Debug\BuildTool.xml</DocumentationFile>
     <PlatformTarget>x64</PlatformTarget>
     <LangVersion>7.3</LangVersion>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <NoWarn>1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
-    <OutputPath>BuildToolTest\Assets\BuildTool\Editor\</OutputPath>
-    <DocumentationFile>BuildToolTest\Assets\BuildTool\Editor\BuildTool.xml</DocumentationFile>
+    <OutputPath>..\BuildToolTest\Assets\BuildTool\Editor\</OutputPath>
+    <DocumentationFile>..\BuildToolTest\Assets\BuildTool\Editor\BuildTool.xml</DocumentationFile>
     <Optimize>true</Optimize>
     <NoWarn>1591</NoWarn>
     <PlatformTarget>x64</PlatformTarget>
@@ -58,7 +60,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Octokit">
-      <HintPath>bin\Release\Octokit.dll</HintPath>
+      <HintPath>Debug\Octokit.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

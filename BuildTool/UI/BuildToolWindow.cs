@@ -154,7 +154,11 @@ namespace BuildTool.UI
         {
             //Load the settings file
             this.settings = BuildToolSettings.Load();
-            BuildFilePath = Path.Combine(Directory.GetParent(Application.dataPath).FullName, PlayerSettings.productName.ToLowerInvariant() + BuildVersion.EXTENSION);
+#if DEBUG
+            BuildFilePath = Path.Combine(BuildToolUtils.DataPath, BuildToolUtils.ProductName.ToLowerInvariant() + BuildVersion.EXTENSION);
+#else
+            BuildFilePath = Path.Combine(Directory.GetParent(BuildToolUtils.DataPath).FullName, BuildToolUtils.ProductName.ToLowerInvariant() + BuildVersion.EXTENSION);
+#endif
 
             //Load all secondary objects
             RefreshConnection();
@@ -239,7 +243,7 @@ namespace BuildTool.UI
 
             //Finish the build process asynchronously
             this.cancellationSource = new CancellationTokenSource();
-            this.productName = PlayerSettings.productName;
+            this.productName = BuildToolUtils.ProductName;
             this.buildTask = PostBuildAsync(success, this.cancellationSource.Token);
             this.buildTask.ContinueWith(OnBuildProcessComplete);
             Repaint();

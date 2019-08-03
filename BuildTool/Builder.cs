@@ -73,7 +73,7 @@ namespace BuildTool
             BuildPlayerOptions options = new BuildPlayerOptions
             {
                 scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray(),
-                locationPathName = Path.Combine(parentDirectory, PlayerSettings.productName),
+                locationPathName = Path.Combine(parentDirectory, BuildToolUtils.ProductName),
                 target = target,
                 options = settings.DevelopmentBuild ? BuildOptions.Development : BuildOptions.None
             };
