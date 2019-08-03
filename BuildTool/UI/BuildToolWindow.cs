@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildTool.Extensions;
-using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
 
@@ -40,6 +39,11 @@ namespace BuildTool.UI
         /// Current active BuildToolWindow
         /// </summary>
         public static BuildToolWindow Window { get; private set; }
+
+        /// <summary>
+        /// Path to the BuildFile on the disk
+        /// </summary>
+        public static string BuildFilePath { get; private set; }
 
         private static GUIStyle refreshButtonStyle;
         /// <summary>
@@ -150,6 +154,11 @@ namespace BuildTool.UI
         {
             //Load the settings file
             this.settings = BuildToolSettings.Load();
+#if DEBUG
+            BuildFilePath = Path.Combine(BuildToolUtils.DataPath, BuildToolUtils.ProductName.ToLowerInvariant() + BuildVersion.EXTENSION);
+#else
+            BuildFilePath = Path.Combine(Directory.GetParent(BuildToolUtils.DataPath).FullName, BuildToolUtils.ProductName.ToLowerInvariant() + BuildVersion.EXTENSION);
+#endif
 
             //Load all secondary objects
             RefreshConnection();
@@ -188,7 +197,7 @@ namespace BuildTool.UI
             //Try to get the build from the webservice
             try
             {
-                this.BuildVersion = await JsonWebClient.GetJsonObject<BuildVersion>(this.Settings.VersionURL);
+                this.BuildVersion = await BuildVersionWebClient.GetBuildVersion(this.Settings.VersionURL);
             }
             catch (Exception e)
             {
@@ -197,7 +206,7 @@ namespace BuildTool.UI
             if (this.BuildVersion != null)
             {
                 this.APIStatus = BuildAPIStatus.CONNECTED;
-                this.Log($"Reply:\n{JsonConvert.SerializeObject(this.BuildVersion, Formatting.Indented)}");
+                this.Log("Reply:\n" + this.BuildVersion.InfoString());
             }
             else
             {
@@ -234,7 +243,7 @@ namespace BuildTool.UI
 
             //Finish the build process asynchronously
             this.cancellationSource = new CancellationTokenSource();
-            this.productName = PlayerSettings.productName;
+            this.productName = BuildToolUtils.ProductName;
             this.buildTask = PostBuildAsync(success, this.cancellationSource.Token);
             this.buildTask.ContinueWith(OnBuildProcessComplete);
             Repaint();
@@ -276,7 +285,7 @@ namespace BuildTool.UI
                 {
                     //Copy the build file over
                     this.status = targetName + " - Copying build file";
-                    await BuildToolUtils.CopyFileAsync(BuildVersion.FilePath, Path.Combine(outputDirectory, BuildToolUtils.GetAppDataPath(target), this.productName.ToLowerInvariant() + BuildVersion.EXTENSION));
+                    await BuildToolUtils.CopyFileAsync(BuildFilePath, Path.Combine(outputDirectory, BuildToolUtils.GetAppDataPath(target), this.productName.ToLowerInvariant() + BuildVersion.EXTENSION));
                     this.Log($"Copied build file to {targetName} build folder");
                 }
                 catch (Exception e)

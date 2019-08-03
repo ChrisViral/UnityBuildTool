@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
+using System.Reflection;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
@@ -91,9 +92,27 @@ namespace BuildTool
 
         #region Static properties
         /// <summary>
+        /// The path to the data directory
+        /// </summary>
+        #if DEBUG
+        public static string DataPath { get; } = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+        #else
+        public static string DataPath => Application.dataPath;
+        #endif
+
+        /// <summary>
+        /// Name of the Product being built
+        /// </summary>
+        #if DEBUG
+        public static string ProductName { get; } = Assembly.GetExecutingAssembly().GetName().Name;
+        #else
+        public static string ProductName => PlayerSettings.productName;
+        #endif
+
+        /// <summary>
         /// Full path of the project folder
         /// </summary>
-        public static string ProjectFolderPath { get; } = Directory.GetParent(Application.dataPath).FullName;
+        public static string ProjectFolderPath { get; } = Directory.GetParent(DataPath).FullName;
 
         private static GUIStyle backgroundStyle;
         /// <summary>
@@ -224,21 +243,21 @@ namespace BuildTool
                 //%appname%_Data/ on Windows and Linux
                 case BuildTarget.StandaloneWindows64:
                 case BuildTarget.StandaloneLinux64:
-                    return PlayerSettings.productName + "_Data";
+                    return ProductName + "_Data";
 
                 //%appname%.app/Contents/ on OSX
                 case BuildTarget.StandaloneOSX:
-                    return Path.Combine(PlayerSettings.productName + ".app", "Contents");
+                    return Path.Combine(ProductName + ".app", "Contents");
 
                 //%appname%/Data/ on WSA, iOS, and tvOS
                 case BuildTarget.WSAPlayer:
                 case BuildTarget.iOS:
                 case BuildTarget.tvOS:
-                    return Path.Combine(PlayerSettings.productName, "Data");
+                    return Path.Combine(ProductName, "Data");
 
                 //%appname%/Build on WebGL... I think?
                 case BuildTarget.WebGL:
-                    return Path.Combine(PlayerSettings.productName, "Build");
+                    return Path.Combine(ProductName, "Build");
 
                 //TODO: Probably test and figure out where to save for other targets
                 default:
