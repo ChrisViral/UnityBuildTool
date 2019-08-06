@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
-using System.Reflection;
+using System.Linq;
 using System.Threading.Tasks;
+using BuildTool.Extensions;
 #if !DEBUG
 using UnityEditor;
 using UnityEngine;
@@ -116,7 +117,7 @@ namespace BuildTool
         /// <summary>
         /// Full path of the project folder
         /// </summary>
-        public static string ProjectFolderPath { get; } = Directory.GetParent(DataPath).FullName;
+        public static string ProjectFolderPath => Directory.GetParent(DataPath).FullName;
 
         #if !DEBUG
         private static GUIStyle backgroundStyle;
@@ -183,29 +184,7 @@ namespace BuildTool
                 }
             }
         }
-        #endif
 
-        /// <summary>
-        /// Gets the relative path to a given folder
-        /// </summary>
-        /// <param name="path">Path to get the relative for</param>
-        /// <param name="folder">Folder to get the relative from</param>
-        /// <returns>The relative path from the specified folder</returns>
-        public static string GetRelativePath(string path, string folder)
-        {
-            //If the path or folder is empty, return an empty string
-            if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(folder)) { return string.Empty; }
-
-            //Ensure the folder ends with a slash
-            if (!folder.EndsWith(separatorString))
-            {
-                folder += separatorString;
-            }
-            //Create relative path
-            return Uri.UnescapeDataString(new Uri(folder).MakeRelativeUri(new Uri(path)).ToString());
-        }
-
-        #if !DEBUG
         /// <summary>
         /// Checks if a SerializedProperty contains a given value
         /// </summary>
@@ -276,6 +255,26 @@ namespace BuildTool
         #endif
 
         /// <summary>
+        /// Gets the relative path to a given folder
+        /// </summary>
+        /// <param name="path">Path to get the relative for</param>
+        /// <param name="folder">Folder to get the relative from</param>
+        /// <returns>The relative path from the specified folder</returns>
+        public static string GetRelativePath(string path, string folder)
+        {
+            //If the path or folder is empty, return an empty string
+            if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(folder)) { return string.Empty; }
+
+            //Ensure the folder ends with a slash
+            if (!folder.EndsWith(separatorString))
+            {
+                folder += separatorString;
+            }
+            //Create relative path
+            return Uri.UnescapeDataString(new Uri(folder).MakeRelativeUri(new Uri(path)).ToString());
+        }
+
+        /// <summary>
         /// Copies a file from a source path to a destination path asynchronously
         /// </summary>
         /// <param name="source">Source path to the file to copy</param>
@@ -283,9 +282,22 @@ namespace BuildTool
         /// <returns>The awaitable copy I/O task</returns>
         public static async Task CopyFileAsync(string source, string destination)
         {
+            //Check for preconditions
+            if (string.IsNullOrEmpty(source)) { throw new ArgumentNullException(nameof(source), "Source file name cannot be null or empty"); }
+            if (string.IsNullOrEmpty(destination)) { throw new ArgumentNullException(nameof(destination), "Destination file name cannot be null or empty"); }
+            source = Path.GetFullPath(source); //Ensure we don't have any /./ or /../ in our path
+            if (!File.Exists(source)) { throw new FileNotFoundException($"The file {source} could not be found"); }
+
+            //Make sure the destination directory exists
+            DirectoryInfo parentDir = Directory.GetParent(destination);
+            if (!parentDir.Exists)
+            {
+                parentDir.Create();
+            }
+
             //Open in and out streams
             using (FileStream sourceStream = File.OpenRead(source))
-            using (FileStream destinationStream = File.OpenWrite(destination))
+            using (FileStream destinationStream = File.Create(destination))
             {
                 //Await copy
                 await sourceStream.CopyToAsync(destinationStream).ConfigureAwait(false);
@@ -297,11 +309,20 @@ namespace BuildTool
         /// </summary>
         /// <param name="source">Source path to copy from</param>
         /// <param name="destination">Destination path to copy to</param>
+        /// <exception cref="ArgumentNullException">If the source or destination directories are null</exception>
+        /// <exception cref="DirectoryNotFoundException">If the source directory cannot be found</exception>
         /// <returns>The awaitable copy I/O task</returns>
         public static async Task CopyFolderAsync(string source, string destination)
         {
+            //Check for preconditions
+            if (string.IsNullOrEmpty(source)) { throw new ArgumentNullException(nameof(source), "Source directory name cannot be null or empty"); }
+            if (string.IsNullOrEmpty(destination)) { throw new ArgumentNullException(nameof(destination), "Destination folder name cannot be null or empty"); }
+            source = Path.GetFullPath(source); //Ensure we don't have any /./ or /../ in our path
+            if (!Directory.Exists(source)) { throw new DirectoryNotFoundException($"The directory {source} could not be found"); }
+
             //Loop through all the subdirectories of the source dir
-            foreach (DirectoryInfo dir in new DirectoryInfo(source).EnumerateDirectories("*", SearchOption.AllDirectories))
+            DirectoryInfo sourceDir = new DirectoryInfo(source);
+            foreach (DirectoryInfo dir in sourceDir.Yield().Concat(sourceDir.EnumerateDirectories("*", SearchOption.AllDirectories)))
             {
                 //Get the output dir
                 string outputDir = dir.FullName.Replace(source, destination);
@@ -313,7 +334,7 @@ namespace BuildTool
                 {
                     //Open in and out streams
                     using (FileStream sourceStream = file.OpenRead())
-                    using (FileStream destinationStream = File.OpenWrite(Path.Combine(outputDir, file.Name)))
+                    using (FileStream destinationStream = File.Create(Path.Combine(outputDir, file.Name)))
                     {
                         //Await copy
                         await sourceStream.CopyToAsync(destinationStream).ConfigureAwait(false);
@@ -330,12 +351,19 @@ namespace BuildTool
         /// <returns>The task associated to this zip file creation</returns>
         public static async Task CreateZipAsync(string path, string source)
         {
-            using (ZipArchive archive = new ZipArchive(File.OpenWrite(path), ZipArchiveMode.Create, false))
+            //Check for preconditions
+            if (string.IsNullOrEmpty(source)) { throw new ArgumentNullException(nameof(source), "Source directory name cannot be null or empty"); }
+            if (string.IsNullOrEmpty(path)) { throw new ArgumentNullException(nameof(path), "Destination zip file name cannot be null or empty"); }
+            source = Path.GetFullPath(source); //Ensure we don't have any /./ or /../ in our path
+            if (!Directory.Exists(source)) { throw new DirectoryNotFoundException($"The directory {source} could not be found"); }
+
+            //Create archive
+            using (ZipArchive archive = new ZipArchive(File.Create(path), ZipArchiveMode.Create, false))
             {
+                source = Path.GetFullPath(source);
                 foreach (FileInfo file in new DirectoryInfo(source).EnumerateFiles("*", SearchOption.AllDirectories))
                 {
-                    ZipArchiveEntry entry = archive.CreateEntry(GetRelativePath(file.FullName, source), CompressionLevel.Optimal);
-                    using (Stream entryStream = entry.Open())
+                    using (Stream entryStream = archive.CreateEntry(GetRelativePath(file.FullName, source), CompressionLevel.Optimal).Open())
                     using (FileStream fileStream = file.OpenRead())
                     {
                         await fileStream.CopyToAsync(entryStream).ConfigureAwait(false);
