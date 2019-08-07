@@ -133,11 +133,11 @@ namespace BuildTool
         public BuildTargetFlags TargetFlags => this.targetFlags;
 
         [SerializeField]
-        private List<string> copyOnBuild = new List<string>();
+        private List<BuildItem> copyOnBuild = new List<BuildItem>();
         /// <summary>
         /// List of files and folders to copy on build
         /// </summary>
-        public List<string> CopyOnBuild => this.copyOnBuild;
+        public List<BuildItem> CopyOnBuild => this.copyOnBuild;
         #endregion
 
         #region Static methods

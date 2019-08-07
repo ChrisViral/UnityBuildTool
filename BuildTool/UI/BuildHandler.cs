@@ -8,6 +8,7 @@ using UnityEditor.AnimatedValues;
 using UnityEngine;
 using VersionBump = BuildTool.BuildVersion.VersionBump;
 using BuildAPIStatus = BuildTool.UI.BuildToolWindow.BuildAPIStatus;
+using CopyLocation = BuildTool.BuildItem.CopyLocation;
 
 namespace BuildTool.UI
 {
@@ -411,7 +412,13 @@ namespace BuildTool.UI
                 }
                 GUI.backgroundColor = Color.white;
                 //Entry to copy label
-                EditorGUILayout.LabelField(toCopy.stringValue);
+                toCopy.NextVisible(true); //Path
+                string path = toCopy.stringValue;
+                //Make sure the path isn't too long to be displayed
+                if (path.Length > 40) { path = path.Substring(0, 37) + "..."; }
+                EditorGUILayout.LabelField(new GUIContent(path, toCopy.stringValue));
+                toCopy.NextVisible(true); //Location
+                toCopy.intValue = (int)(CopyLocation)EditorGUILayout.EnumPopup((CopyLocation)toCopy.intValue, GUILayout.Width(100f));
                 EditorGUILayout.EndHorizontal();
                 index++;
             }
@@ -428,11 +435,13 @@ namespace BuildTool.UI
                 //Get relative path
                 string relative = BuildToolUtils.OpenProjectFilePanel("Select file to copy on build");
                 //If a valid file is selected, add it
-                if (!string.IsNullOrEmpty(relative) && !BuildToolUtils.PropertyContains(prop, relative))
+                if (!string.IsNullOrEmpty(relative) && !prop.Children().Any(p => p.Contains(BuildItem.PATH_NAME, relative)))
                 {
                     //Increment size and set at the end
                     prop.arraySize++;
-                    prop.GetArrayElementAtIndex(prop.arraySize - 1).stringValue = relative;
+                    SerializedProperty item = prop.GetArrayElementAtIndex(prop.arraySize - 1);
+                    item.NextVisible(true); //Path
+                    item.stringValue = relative;
                 }
             }
             GUILayout.Space(10f);
@@ -441,11 +450,13 @@ namespace BuildTool.UI
                 //Get relative path
                 string relative = BuildToolUtils.OpenProjectFolderPanel("Select folder to copy on build");
                 //If a valid folder is selected, add it
-                if (!string.IsNullOrEmpty(relative) && !BuildToolUtils.PropertyContains(prop, relative))
+                if (!string.IsNullOrEmpty(relative) && !prop.Children().Any(p => p.Contains(BuildItem.PATH_NAME, relative)))
                 {
                     //Increment size and set at the end
                     prop.arraySize++;
-                    prop.GetArrayElementAtIndex(prop.arraySize - 1).stringValue = relative;
+                    SerializedProperty item = prop.GetArrayElementAtIndex(prop.arraySize - 1);
+                    item.NextVisible(true); //Path
+                    item.stringValue = relative;
                 }
             }
             GUILayout.Space(12f);

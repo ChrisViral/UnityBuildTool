@@ -297,10 +297,10 @@ namespace BuildTool.UI
                 token.ThrowIfCancellationRequested();
 
                 //Loop through all files and folders to copy
-                foreach (string toCopy in this.Settings.CopyOnBuild)
+                foreach (BuildItem toCopy in this.Settings.CopyOnBuild)
                 {
                     //Get the path to that file or folder
-                    string path = Path.Combine(BuildToolUtils.ProjectFolderPath, toCopy);
+                    string path = Path.Combine(BuildToolUtils.ProjectFolderPath, toCopy.Path);
                     try
                     {
                         //File to copy

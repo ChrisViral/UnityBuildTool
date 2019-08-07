@@ -186,24 +186,6 @@ namespace BuildTool
         }
 
         /// <summary>
-        /// Checks if a SerializedProperty contains a given value
-        /// </summary>
-        /// <param name="property">Property to check</param>
-        /// <param name="value">Value to find</param>
-        /// <returns>True if the value is contained in the SerializedProperty, false otherwise</returns>
-        public static bool PropertyContains(SerializedProperty property, string value)
-        {
-            //Loop through the property
-            foreach (SerializedProperty prop in property)
-            {
-                //If a value equals the search, return true
-                if (prop.stringValue == value) { return true; }
-            }
-            //If not return false
-            return false;
-        }
-
-        /// <summary>
         /// Opens a file selection panel within the project folder and returns the relative path to the file selected
         /// </summary>
         /// <param name="title">Title for the file selection panel</param>
