@@ -109,7 +109,7 @@ namespace BuildTool.UI
             }
 
             //Set the selected repository
-            this.SelectedRepository = this.SelectedOwner.Selected.Repository;
+            if (this.SelectedOwner != null) { this.SelectedRepository = this.SelectedOwner.Selected.Repository; }
             EditorGUILayout.EndScrollView();
             GUILayout.FlexibleSpace();
             EditorGUILayout.EndVertical();
