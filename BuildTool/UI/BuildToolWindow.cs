@@ -81,6 +81,7 @@ namespace BuildTool.UI
         internal int current;
         internal float total = 1f; //Prevents div0 errors
         private bool clear, unfocus;
+        private string popupTitle, popupContent;
         #endregion
 
         #region Properties
@@ -257,7 +258,7 @@ namespace BuildTool.UI
             //Get the builds folder path
             string buildsFolder = Path.Combine(BuildToolUtils.ProjectFolderPath, this.Settings.OutputFolder);
             //Get progressbar stuff
-            this.current = 0;
+            int index = this.current = 0;
             int steps = 2 + this.settings.CopyOnBuild.Count;
             this.total = this.targets.Length * steps;
             //Check for cancellation
@@ -269,7 +270,7 @@ namespace BuildTool.UI
                 string targetName = BuildToolUtils.GetBuildTargetName(target);
 
                 //If the build has failed, ignore this target
-                if (!success[this.current])
+                if (!success[index])
                 {
                     this.current += steps;
                     this.Log($"Skipping post-build on {targetName} because the build did not succeed");
@@ -278,7 +279,7 @@ namespace BuildTool.UI
 
                 //Get output folder
                 string outputDirectory = Path.Combine(buildsFolder, targetName);
-                string buildAppData = Path.Combine(outputDirectory, BuildToolUtils.GetAppDataPath(target));
+                string buildAppData = Path.Combine(outputDirectory, BuildToolUtils.GetAppDataPath(target, this.productName));
                 this.progressTitle = targetName + " Post Build";
                 try
                 {
@@ -376,6 +377,7 @@ namespace BuildTool.UI
                 this.current++;
                 //Check for cancellation
                 token.ThrowIfCancellationRequested();
+                index++;
             }
 
             if (this.settings.PublishRelease)
@@ -392,19 +394,32 @@ namespace BuildTool.UI
         private void OnBuildProcessComplete(Task task)
         {
             //Log the result
-            if (task.IsCanceled) { this.Log("Build canceled"); }
+            if (task.IsCanceled)
+            {
+                this.Log("Build canceled");
+                this.popupTitle = "Build Cancelled";
+                this.popupContent = "Build process cancelled";
+            }
             else if (task.IsFaulted)
             {
                 if (task.Exception != null) { this.LogException(task.Exception); }
                 this.Log("Build encountered a problem and shutdown");
+                this.popupTitle = "Build Failed";
+                this.popupContent = "The build has failed\nCheck log for more info";
 
             }
-            else { this.Log("Build successfully completed"); }
-
-
+            else
+            {
+                this.Log("Build successfully completed");
+                this.popupTitle = "Build Succeeded";
+                this.popupContent = "Build completed successfully!";
+            }
             //Clear the task stuff
-            this.cancellationSource?.Dispose();
-            this.cancellationSource = null;
+            if (this.cancellationSource != null)
+            {
+                this.cancellationSource.Dispose();
+                this.cancellationSource = null;
+            }
             this.buildTask = null;
 
             //Reset the UI and reenable
@@ -510,6 +525,8 @@ namespace BuildTool.UI
                 {
                     EditorUserBuildSettings.SwitchActiveBuildTargetAsync(BuildPipeline.GetBuildTargetGroup(this.originalTarget), this.originalTarget);
                 }
+                //Display success popup
+                EditorUtility.DisplayDialog(this.popupTitle, this.popupContent, "Okay");
                 //Reset clear flag
                 this.clear = false;
             }

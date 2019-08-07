@@ -464,8 +464,17 @@ namespace BuildTool
                 Type = TaggedType.Commit,
                 Tagger = new Committer(this.Name, this.Email, version.BuildTime)
             };
-            //Send tag to GitHub
-            GitTag tag = await this.client.Git.Tag.Create(this.CurrentRepository.Id, newTag);
+            try
+            {
+                //Send tag to GitHub
+                await this.client.Git.Tag.Create(this.CurrentRepository.Id, newTag);
+            }
+            catch (ApiException e)
+            {
+                //We get an error if it already existed
+                this.Log($"Tag {newTag.Tag} already exists");
+                this.LogError(e);
+            }
             //Check for cancellation
             token.ThrowIfCancellationRequested();
 
@@ -474,7 +483,7 @@ namespace BuildTool
             this.window.current++;
 
             //Create new release
-            NewRelease newRelease = new NewRelease(tag.Tag)
+            NewRelease newRelease = new NewRelease(newTag.Tag)
             {
                 Name = snapshot.title,
                 Body = snapshot.description,

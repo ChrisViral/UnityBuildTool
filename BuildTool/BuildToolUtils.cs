@@ -202,29 +202,32 @@ namespace BuildTool
         /// Gets the relative path to the build's application data folder
         /// </summary>
         /// <param name="target">The BuildTarget to get the path for</param>
+        /// <param name="productName">Name of the product to look for, if omitted uses the default one</param>
         /// <returns>The relative path to the application data folder, or an empty string if the platform isn't supported</returns>
-        public static string GetAppDataPath(BuildTarget target)
+        public static string GetAppDataPath(BuildTarget target, string productName = null)
         {
+            //Use optional product name if necessary
+            if (string.IsNullOrEmpty(productName)) { productName = ProductName; }
             switch (target)
             {
                 //%appname%_Data/ on Windows and Linux
                 case BuildTarget.StandaloneWindows64:
                 case BuildTarget.StandaloneLinux64:
-                    return ProductName + "_Data";
+                    return productName + "_Data";
 
                 //%appname%.app/Contents/ on OSX
                 case BuildTarget.StandaloneOSX:
-                    return Path.Combine(ProductName + ".app", "Contents");
+                    return Path.Combine(productName + ".app", "Contents");
 
                 //%appname%/Data/ on WSA, iOS, and tvOS
                 case BuildTarget.WSAPlayer:
                 case BuildTarget.iOS:
                 case BuildTarget.tvOS:
-                    return Path.Combine(ProductName, "Data");
+                    return Path.Combine(productName, "Data");
 
                 //%appname%/Build on WebGL... I think?
                 case BuildTarget.WebGL:
-                    return Path.Combine(ProductName, "Build");
+                    return Path.Combine(productName, "Build");
 
                 //TODO: Probably test and figure out where to save for other targets
                 default:
