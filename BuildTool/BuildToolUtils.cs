@@ -21,19 +21,18 @@ namespace BuildTool
     public enum BuildTargetFlags
     {
         //Gotta love binary literals
-        None     = 0b000000000000,
-        Win32    = 0b000000000001,
-        Win64    = 0b000000000010,
-        OSX      = 0b000000000100,
-        Linux64  = 0b000000001000,
-        Android  = 0b000000010000,
-        iOS      = 0b000000100000,
-        WebGL    = 0b000001000000,
-        WinStore = 0b000010000000,
-        XboxOne  = 0b000100000000,
-        PS4      = 0b001000000000,
-        Switch   = 0b010000000000,
-        tvOS     = 0b100000000000
+        None     = 0b00000000000,
+        Win32    = 0b00000000001,
+        Win64    = 0b00000000010,
+        OSX      = 0b00000000100,
+        Linux64  = 0b00000001000,
+      //Android  = 0b00000010000,  Not supported yet
+        iOS      = 0b00000100000,
+        WebGL    = 0b00001000000,
+      //XboxOne  = 0b00010000000,  Not supported yet
+      //PS4      = 0b00100000000,  Not supported yet
+      //Switch   = 0b01000000000,  Not supported yet
+        tvOS     = 0b10000000000
     }
 
     /// <summary>
@@ -46,19 +45,18 @@ namespace BuildTool
         /// <summary>
         /// Dictionary giving a nice name for BuildTargets
         /// </summary>
-        private static readonly Dictionary<BuildTarget, string> targetNames = new Dictionary<BuildTarget, string>(12)
+        private static readonly Dictionary<BuildTarget, string> targetNames = new Dictionary<BuildTarget, string>(7)
         {
             [BuildTarget.StandaloneWindows]   = "Win32",
             [BuildTarget.StandaloneWindows64] = "Win64",
             [BuildTarget.StandaloneOSX]       = "OSX",
             [BuildTarget.StandaloneLinux64]   = "Linux64",
-            [BuildTarget.Android]             = "Android",
+          //[BuildTarget.Android]             = "Android", Not supported yet
             [BuildTarget.iOS]                 = "iOS",
             [BuildTarget.WebGL]               = "WebGL",
-            [BuildTarget.WSAPlayer]           = "WSA",
-            [BuildTarget.XboxOne]             = "XboxOne",
-            [BuildTarget.PS4]                 = "PS4",
-            [BuildTarget.Switch]              = "Switch",
+          //[BuildTarget.XboxOne]             = "XboxOne", Not supported yet
+          //[BuildTarget.PS4]                 = "PS4",     Not supported yet
+          //[BuildTarget.Switch]              = "Switch",  Not supported yet
             [BuildTarget.tvOS]                = "tvOS"
         };
         /// <summary>
@@ -71,13 +69,12 @@ namespace BuildTool
             (BuildTargetFlags.Win64,    BuildTarget.StandaloneWindows64),
             (BuildTargetFlags.OSX,      BuildTarget.StandaloneOSX),
             (BuildTargetFlags.Linux64,  BuildTarget.StandaloneLinux64),
-            (BuildTargetFlags.Android,  BuildTarget.Android),
+          //(BuildTargetFlags.Android,  BuildTarget.Android), Not supported yet
             (BuildTargetFlags.iOS,      BuildTarget.iOS),
             (BuildTargetFlags.WebGL,    BuildTarget.WebGL),
-            (BuildTargetFlags.WinStore, BuildTarget.WSAPlayer),
-            (BuildTargetFlags.XboxOne,  BuildTarget.XboxOne),
-            (BuildTargetFlags.PS4,      BuildTarget.PS4),
-            (BuildTargetFlags.Switch,   BuildTarget.Switch),
+          //(BuildTargetFlags.XboxOne,  BuildTarget.XboxOne), Not supported yet
+          //(BuildTargetFlags.PS4,      BuildTarget.PS4),     Not supported yet
+          //(BuildTargetFlags.Switch,   BuildTarget.Switch),  Not supported yet
             (BuildTargetFlags.tvOS,     BuildTarget.tvOS)
         };
         /// <summary>
