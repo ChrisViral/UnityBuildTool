@@ -92,7 +92,7 @@ namespace BuildTool.UI
         private static readonly GUIContent draftToggle          = new GUIContent("Draft",                 "If the GitHub release should be saved as a draft");
         private static readonly GUIContent publishToggle        = new GUIContent("Publish Release",       "If the release should be published to GitHub or not");
         private static readonly GUIContent devBuildToggle       = new GUIContent("Development Build",     "If the player should be built by Unity as a development build");
-        private static readonly GUIContent bumpLabel            = new GUIContent("Bump",                  "How to bump the version number");
+        private static readonly GUIContent bumpLabel            = new GUIContent("Bump:",                  "How to bump the version number");
         private static readonly GUIContent outputDirectoryLabel = new GUIContent("Output Directory:",     "Local path to the directory where the output of the builds should be saved");
         private static readonly GUIContent buildTargetsLabel    = new GUIContent("Build targets:",        "Which platforms the game will be built for");
         private static readonly GUIContent buildButton          = new GUIContent("BUILD",                 "Build the game for the selected targets and release to GitHub");
@@ -340,9 +340,9 @@ namespace BuildTool.UI
             prop.boolValue = EditorGUILayout.ToggleLeft(devBuildToggle, prop.boolValue);
             //Version bump settings
             EditorGUILayout.BeginHorizontal();
-            EditorGUIUtility.labelWidth = 110f;
+            EditorGUILayout.LabelField(bumpLabel, GUILayout.Width(106f));
             GUI.enabled = false;
-            EditorGUILayout.TextField(bumpLabel, this.window.BuildVersion.GetBumpedVersionString(this.bump), GUILayout.Width(300f));
+            EditorGUILayout.TextField(this.window.BuildVersion.GetBumpedVersionString(this.bump), GUILayout.Width(190f));
             GUI.enabled = this.window.UIEnabled;
             this.bump = (VersionBump)EditorGUILayout.EnumPopup(this.bump, centeredPopupStyle, GUILayout.Width(70f));
             EditorGUILayout.EndHorizontal();
@@ -350,6 +350,7 @@ namespace BuildTool.UI
             //Output folder property
             prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.OUTPUT_FOLDER_NAME);
             //Output folder field
+            EditorGUIUtility.labelWidth = 110f;
             EditorGUILayout.PropertyField(prop, outputDirectoryLabel, GUILayout.Width(300f));
             //Browse button
             if (GUILayout.Button("Browse...", EditorStyles.miniButton, GUILayout.Width(70f)))
