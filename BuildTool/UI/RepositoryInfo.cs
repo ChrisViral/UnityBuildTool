@@ -1,4 +1,5 @@
-﻿using Octokit;
+﻿#if !DEBUG
+using Octokit;
 using UnityEditor;
 using UnityEditor.AnimatedValues;
 
@@ -79,3 +80,4 @@ namespace BuildTool.UI
         #endregion
     }
 }
+#endif

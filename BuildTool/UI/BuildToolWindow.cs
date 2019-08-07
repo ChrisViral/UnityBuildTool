@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if !DEBUG
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -6,6 +7,7 @@ using System.Threading.Tasks;
 using BuildTool.Extensions;
 using UnityEditor;
 using UnityEngine;
+using CopyLocation = BuildTool.BuildItem.CopyLocation;
 
 namespace BuildTool.UI
 {
@@ -153,12 +155,8 @@ namespace BuildTool.UI
         private void Init()
         {
             //Load the settings file
-            this.settings = BuildToolSettings.Load();
-#if DEBUG
-            BuildFilePath = Path.Combine(BuildToolUtils.DataPath, BuildToolUtils.ProductName.ToLowerInvariant() + BuildVersion.EXTENSION);
-#else
             BuildFilePath = Path.Combine(Directory.GetParent(BuildToolUtils.DataPath).FullName, BuildToolUtils.ProductName.ToLowerInvariant() + BuildVersion.EXTENSION);
-#endif
+            this.settings = BuildToolSettings.Load();
 
             //Load all secondary objects
             RefreshConnection();
@@ -280,12 +278,13 @@ namespace BuildTool.UI
 
                 //Get output folder
                 string outputDirectory = Path.Combine(buildsFolder, targetName);
+                string buildAppData = Path.Combine(outputDirectory, BuildToolUtils.GetAppDataPath(target));
                 this.progressTitle = targetName + " Post Build";
                 try
                 {
                     //Copy the build file over
                     this.status = targetName + " - Copying build file";
-                    await BuildToolUtils.CopyFileAsync(BuildFilePath, Path.Combine(outputDirectory, BuildToolUtils.GetAppDataPath(target), this.productName.ToLowerInvariant() + BuildVersion.EXTENSION));
+                    await BuildToolUtils.CopyFileAsync(BuildFilePath, Path.Combine(buildAppData, this.productName.ToLowerInvariant() + BuildVersion.EXTENSION));
                     this.Log($"Copied build file to {targetName} build folder");
                 }
                 catch (Exception e)
@@ -300,10 +299,23 @@ namespace BuildTool.UI
                 token.ThrowIfCancellationRequested();
 
                 //Loop through all files and folders to copy
-                foreach (string toCopy in this.Settings.CopyOnBuild)
+                foreach (BuildItem toCopy in this.Settings.CopyOnBuild)
                 {
                     //Get the path to that file or folder
-                    string path = Path.Combine(BuildToolUtils.ProjectFolderPath, toCopy);
+                    string path = Path.Combine(BuildToolUtils.ProjectFolderPath, toCopy.Path);
+                    string copyToPath = string.Empty;
+                    switch (toCopy.Location)
+                    {
+                        case CopyLocation.Root:
+                            copyToPath = outputDirectory;
+                            break;
+                        case CopyLocation.InAppData:
+                            copyToPath = buildAppData;
+                            break;
+                        case CopyLocation.WithAppData:
+                            copyToPath = Directory.GetParent(buildAppData).FullName;
+                            break;
+                    }
                     try
                     {
                         //File to copy
@@ -311,7 +323,7 @@ namespace BuildTool.UI
                         {
                             //Copy the file over
                             this.status = targetName + " - Copying file " + toCopy;
-                            await BuildToolUtils.CopyFileAsync(path, Path.Combine(outputDirectory, Path.GetFileName(path)));
+                            await BuildToolUtils.CopyFileAsync(path, Path.Combine(copyToPath, Path.GetFileName(path)));
                             this.Log($"Copied file {path} to {targetName} build folder");
                         }
                         //Folder to copy
@@ -320,7 +332,7 @@ namespace BuildTool.UI
                             //ReSharper disable once AssignNullToNotNullAttribute <- we know it won't be because of the prior Exists call
                             //Copy the folder over
                             this.status = targetName + " - Copying folder " + toCopy;
-                            await BuildToolUtils.CopyFolderAsync(path, Path.Combine(outputDirectory, Path.GetFileName(path)));
+                            await BuildToolUtils.CopyFolderAsync(path, Path.Combine(copyToPath, Path.GetFileName(path)));
                             this.Log($"Copied folder {path} to {targetName} build folder");
                         }
                         //Neither, invalid
@@ -505,3 +517,4 @@ namespace BuildTool.UI
         #endregion
     }
 }
+#endif

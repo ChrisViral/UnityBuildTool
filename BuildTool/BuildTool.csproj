@@ -87,11 +87,12 @@
     <Compile Include="BuildToolSettings.cs" />
     <Compile Include="BuildToolUtils.cs" />
     <Compile Include="BuildVersion.cs" />
-    <Compile Include="Extensions\LoggingExtensions.cs" />
+    <Compile Include="Extensions\Extensions.cs" />
     <Compile Include="GithubAuthenticator.cs" />
     <Compile Include="BuildVersionWebClient.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UI\BuildHandler.cs" />
+    <Compile Include="BuildItem.cs" />
     <Compile Include="UI\BuildToolWindow.cs" />
     <Compile Include="UI\ConnectionHandler.cs" />
     <Compile Include="UI\RepositoryInfo.cs" />

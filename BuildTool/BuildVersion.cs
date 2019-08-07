@@ -6,8 +6,10 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
 using BuildTool.Extensions;
+#if !DEBUG
 using BuildTool.UI;
 using UnityEditor;
+#endif
 
 #pragma warning disable IDE0051 //Remove unused private members
 
@@ -112,7 +114,7 @@ namespace BuildTool
                 //Assign values individually
                 this.major = value.Major;
                 this.minor = value.Minor;
-                this.build = value.Minor;
+                this.build = value.Build;
                 this.revision = value.Revision;
             }
         }
@@ -147,7 +149,7 @@ namespace BuildTool
         /// <summary>
         /// The date string of the UTC now time
         /// </summary>
-        public string NowDateString => DateTime.UtcNow.ToString(TIME_FORMAT, CultureInfo.InvariantCulture);
+        public string BuildDateString => this.BuildTime.ToString(TIME_FORMAT, CultureInfo.InvariantCulture);
 
         /// <summary>
         /// Author of the build
@@ -158,9 +160,28 @@ namespace BuildTool
 
         #region Constructors
         /// <summary>
-        /// Prevents instantiation
+        /// Default constructor, in-class use only
         /// </summary>
         private BuildVersion() { }
+
+        /// <summary>
+        /// Tests only instantiation
+        /// </summary>
+        /// <param name="major">Major version number</param>
+        /// <param name="minor">Minor version number</param>
+        /// <param name="build">Build version number</param>
+        /// <param name="revision">Revision version number</param>
+        /// <param name="author">Name of the author</param>
+        /// <param name="time">DateTime of the build</param>
+        internal BuildVersion(int major, int minor, int build, int revision, string author, DateTime time)
+        {
+            this.major = major;
+            this.minor = minor;
+            this.build = build;
+            this.revision = revision;
+            this.Author = author;
+            this.BuildTime = time;
+        }
         #endregion
 
         #region Static methods
@@ -170,17 +191,23 @@ namespace BuildTool
         /// <returns>The loaded or created BuildVersion</returns>
         public static BuildVersion FromFile()
         {
+
             //Get file path
+            #if DEBUG
+            string path = Path.Combine(BuildToolUtils.DataPath, BuildToolUtils.ProductName.ToLowerInvariant() + EXTENSION);
+            #else
+            string path = BuildToolWindow.BuildFilePath;
+            #endif
             BuildVersion build = new BuildVersion();
 
             //Check if file exists
-            if (!File.Exists(BuildToolWindow.BuildFilePath)) { build.Log("Version file could not be found"); }
+            if (!File.Exists(path)) { build.Log("Version file could not be found"); }
             else
             {
                 try
                 {
                     //Read version info from file
-                    string[] data = Regex.Match(File.ReadAllText(BuildToolWindow.BuildFilePath, Encoding.ASCII).Trim(), PATTERN)
+                    string[] data = Regex.Match(File.ReadAllText(path, Encoding.ASCII), PATTERN)
                                          .Groups.Cast<Group>()
                                          .Skip(1)  //First group is always the entire match
                                          .Select(g => g.Captures[0].Value)
@@ -266,8 +293,10 @@ namespace BuildTool
             this.BuildTime = DateTime.UtcNow;
             this.revision++;
 
+            #if !DEBUG
             //Set the version in Unity (without the v)
             PlayerSettings.bundleVersion = $"{this.major}.{this.minor}.{this.build}.{this.revision}";
+            #endif
 
             //Save the new build to the disk
             SaveToFile();
@@ -282,13 +311,21 @@ namespace BuildTool
         /// <summary>
         /// Saves this BuildVersion to the disk
         /// </summary>
-        public void SaveToFile() => File.WriteAllText(BuildToolWindow.BuildFilePath, ToString(), Encoding.ASCII);
+        public void SaveToFile()
+        {
+            #if DEBUG
+            string path = Path.Combine(BuildToolUtils.DataPath, BuildToolUtils.ProductName.ToLowerInvariant() + EXTENSION);
+            #else
+            string path = BuildToolWindow.BuildFilePath;
+            #endif
+            File.WriteAllText(path, ToString(), Encoding.ASCII);
+        }
 
         /// <summary>
         ///A string version of the build
         /// </summary>
         /// <returns></returns>
-        public override string ToString() => $"{this.VersionString}|{this.Author}@{this.NowDateString}";
+        public override string ToString() => $"{this.VersionString}|{this.Author}@{this.BuildDateString}";
 
         /// <summary>
         /// Gets an info string from the BuildVersion

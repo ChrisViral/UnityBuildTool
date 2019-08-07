@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿#if !DEBUG
+using System.Collections.Generic;
 using System.Linq;
 using BuildTool.Extensions;
 using Octokit;
@@ -7,6 +8,7 @@ using UnityEditor.AnimatedValues;
 using UnityEngine;
 using VersionBump = BuildTool.BuildVersion.VersionBump;
 using BuildAPIStatus = BuildTool.UI.BuildToolWindow.BuildAPIStatus;
+using CopyLocation = BuildTool.BuildItem.CopyLocation;
 
 namespace BuildTool.UI
 {
@@ -90,7 +92,7 @@ namespace BuildTool.UI
         private static readonly GUIContent draftToggle          = new GUIContent("Draft",                 "If the GitHub release should be saved as a draft");
         private static readonly GUIContent publishToggle        = new GUIContent("Publish Release",       "If the release should be published to GitHub or not");
         private static readonly GUIContent devBuildToggle       = new GUIContent("Development Build",     "If the player should be built by Unity as a development build");
-        private static readonly GUIContent bumpLabel            = new GUIContent("Bump",                  "How to bump the version number");
+        private static readonly GUIContent bumpLabel            = new GUIContent("Bump:",                  "How to bump the version number");
         private static readonly GUIContent outputDirectoryLabel = new GUIContent("Output Directory:",     "Local path to the directory where the output of the builds should be saved");
         private static readonly GUIContent buildTargetsLabel    = new GUIContent("Build targets:",        "Which platforms the game will be built for");
         private static readonly GUIContent buildButton          = new GUIContent("BUILD",                 "Build the game for the selected targets and release to GitHub");
@@ -338,9 +340,9 @@ namespace BuildTool.UI
             prop.boolValue = EditorGUILayout.ToggleLeft(devBuildToggle, prop.boolValue);
             //Version bump settings
             EditorGUILayout.BeginHorizontal();
-            EditorGUIUtility.labelWidth = 110f;
+            EditorGUILayout.LabelField(bumpLabel, GUILayout.Width(106f));
             GUI.enabled = false;
-            EditorGUILayout.TextField(bumpLabel, this.window.BuildVersion.GetBumpedVersionString(this.bump), GUILayout.Width(300f));
+            EditorGUILayout.TextField(this.window.BuildVersion.GetBumpedVersionString(this.bump), GUILayout.Width(190f));
             GUI.enabled = this.window.UIEnabled;
             this.bump = (VersionBump)EditorGUILayout.EnumPopup(this.bump, centeredPopupStyle, GUILayout.Width(70f));
             EditorGUILayout.EndHorizontal();
@@ -348,6 +350,7 @@ namespace BuildTool.UI
             //Output folder property
             prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.OUTPUT_FOLDER_NAME);
             //Output folder field
+            EditorGUIUtility.labelWidth = 110f;
             EditorGUILayout.PropertyField(prop, outputDirectoryLabel, GUILayout.Width(300f));
             //Browse button
             if (GUILayout.Button("Browse...", EditorStyles.miniButton, GUILayout.Width(70f)))
@@ -410,7 +413,13 @@ namespace BuildTool.UI
                 }
                 GUI.backgroundColor = Color.white;
                 //Entry to copy label
-                EditorGUILayout.LabelField(toCopy.stringValue);
+                toCopy.NextVisible(true); //Path
+                string path = toCopy.stringValue;
+                //Make sure the path isn't too long to be displayed
+                if (path.Length > 40) { path = path.Substring(0, 37) + "..."; }
+                EditorGUILayout.LabelField(new GUIContent(path, toCopy.stringValue));
+                toCopy.NextVisible(true); //Location
+                toCopy.intValue = (int)(CopyLocation)EditorGUILayout.EnumPopup((CopyLocation)toCopy.intValue, GUILayout.Width(100f));
                 EditorGUILayout.EndHorizontal();
                 index++;
             }
@@ -427,11 +436,13 @@ namespace BuildTool.UI
                 //Get relative path
                 string relative = BuildToolUtils.OpenProjectFilePanel("Select file to copy on build");
                 //If a valid file is selected, add it
-                if (!string.IsNullOrEmpty(relative) && !BuildToolUtils.PropertyContains(prop, relative))
+                if (!string.IsNullOrEmpty(relative) && !prop.Children().Any(p => p.Contains(BuildItem.PATH_NAME, relative)))
                 {
                     //Increment size and set at the end
                     prop.arraySize++;
-                    prop.GetArrayElementAtIndex(prop.arraySize - 1).stringValue = relative;
+                    SerializedProperty item = prop.GetArrayElementAtIndex(prop.arraySize - 1);
+                    item.NextVisible(true); //Path
+                    item.stringValue = relative;
                 }
             }
             GUILayout.Space(10f);
@@ -440,11 +451,13 @@ namespace BuildTool.UI
                 //Get relative path
                 string relative = BuildToolUtils.OpenProjectFolderPanel("Select folder to copy on build");
                 //If a valid folder is selected, add it
-                if (!string.IsNullOrEmpty(relative) && !BuildToolUtils.PropertyContains(prop, relative))
+                if (!string.IsNullOrEmpty(relative) && !prop.Children().Any(p => p.Contains(BuildItem.PATH_NAME, relative)))
                 {
                     //Increment size and set at the end
                     prop.arraySize++;
-                    prop.GetArrayElementAtIndex(prop.arraySize - 1).stringValue = relative;
+                    SerializedProperty item = prop.GetArrayElementAtIndex(prop.arraySize - 1);
+                    item.NextVisible(true); //Path
+                    item.stringValue = relative;
                 }
             }
             GUILayout.Space(12f);
@@ -458,3 +471,4 @@ namespace BuildTool.UI
         #endregion
     }
 }
+#endif
