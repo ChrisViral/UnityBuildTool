@@ -117,7 +117,7 @@ namespace BuildTool
         /// <summary>
         /// Full path of the project folder
         /// </summary>
-        public static string ProjectFolderPath => Directory.GetParent(DataPath).FullName;
+        public static string ProjectFolderPath { get; } = Directory.GetParent(DataPath).FullName;
 
         #if !DEBUG
         private static GUIStyle backgroundStyle;

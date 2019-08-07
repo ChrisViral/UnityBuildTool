@@ -38,8 +38,8 @@ namespace BuildTool
         [SerializeField]
         private string path;
         /// <summary>
-                               /// Path to the item to copy
-                               /// </summary>
+        /// Path to the item to copy
+        /// </summary>
         public string Path => this.path;
 
         [SerializeField]
