@@ -62,11 +62,8 @@ namespace UnityBuildTool.DeviceFlow
                             throw new ApiException("HTTP Error while accessing the GitHub API", reply.StatusCode);
                         }
 
-                        //Get the content string
-                        using (Stream responseStream = await reply.Content.ReadAsStreamAsync())
-                        {
-                            return (OAuthDeviceFlowResponse)flowResponseSerializer.ReadObject(responseStream);
-                        }
+                        //Get the parsed response
+                        return OAuthDeviceFlowResponse.FromFormString(await reply.Content.ReadAsStringAsync());
                     }
                 }
             }
@@ -111,31 +108,27 @@ namespace UnityBuildTool.DeviceFlow
                                 throw new ApiException("HTTP Error while accessing the GitHub API", reply.StatusCode);
                             }
 
-                            //Get the content string
-                            using (Stream responseStream = await reply.Content.ReadAsStreamAsync())
+                            OAuthDeviceFlowTokenResponse response = OAuthDeviceFlowTokenResponse.FromFormString(await reply.Content.ReadAsStringAsync());
+
+                            if (response.error is null)
                             {
-                                OAuthDeviceFlowTokenResponse response = (OAuthDeviceFlowTokenResponse)tokenResponseSerializer.ReadObject(responseStream);
+                                return response;
+                            }
 
-                                if (response.error is null)
-                                {
-                                    return response;
-                                }
+                            switch (response.error)
+                            {
+                                case "authorization_pending":
+                                    break;
 
-                                switch (response.error)
-                                {
-                                    case "authorization_pending":
-                                        break;
+                                case "slow_down":
+                                    request.pollRate += TimeSpan.FromSeconds(5);
+                                    break;
 
-                                    case "slow_down":
-                                        request.pollRate += TimeSpan.FromSeconds(5);
-                                        break;
+                                case "expired token":
+                                    throw new TimeoutException("OAuth user code has expired, a new one must be requested");
 
-                                    case "expired token":
-                                        throw new TimeoutException("OAuth user code has expired, a new one must be requested");
-
-                                    default:
-                                        throw new ApiException($"{response.error}: {response.errorDescription}\n{response.errorURL}", reply.StatusCode);
-                                }
+                                default:
+                                    throw new ApiException($"{response.error}: {response.errorDescription}\n{response.errorURL}", reply.StatusCode);
                             }
                         }
                     }

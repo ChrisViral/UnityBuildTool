@@ -9,7 +9,7 @@ namespace UnityBuildTool.DeviceFlow
     public class OAuthDeviceFlowRequest
     {
         #region Constants
-        private static readonly string[] defaultScope = { "user" };
+        private const string defaultScope = "user";
         #endregion
 
         #region Fields
@@ -18,7 +18,7 @@ namespace UnityBuildTool.DeviceFlow
         public string clientID;
         /// <summary>Requested scopes</summary>
         [DataMember(IsRequired = true, Order = 1)]
-        public string[] scope = defaultScope;
+        public string scope = defaultScope;
         #endregion
 
         #region Constructors
@@ -32,8 +32,8 @@ namespace UnityBuildTool.DeviceFlow
         /// Creates a new OAuth device flow request with the specified client ID and scope
         /// </summary>
         /// <param name="clientID">Application client ID</param>
-        /// <param name="scope">Requested scope</param>
-        public OAuthDeviceFlowRequest(string clientID, params string[] scope) : this(clientID) => this.scope = scope;
+        /// <param name="scopes">Requested scope</param>
+        public OAuthDeviceFlowRequest(string clientID, params string[] scopes) : this(clientID) => this.scope = string.Join(", ", scopes);
         #endregion
     }
 }

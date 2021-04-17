@@ -1,29 +1,77 @@
-﻿using System.Runtime.Serialization;
+﻿using System;
 
 namespace UnityBuildTool.DeviceFlow
 {
     /// <summary>
     /// OAuth Device Flow initialization response
     /// </summary>
-    [DataContract]
     public class OAuthDeviceFlowResponse
     {
         #region Fields
         /// <summary>The device verification code</summary>
-        [DataMember(IsRequired = true, Order = 0, Name = "device_code")]
         public string deviceCode;
         /// <summary>The user code to input</summary>
-        [DataMember(IsRequired = true, Order = 1, Name = "user_code")]
         public string userCode;
         /// <summary>URL at which the user code must be entered</summary>
-        [DataMember(IsRequired = true, Order = 2, Name = "verification_uri")]
         public string verificationUrl;
         /// <summary>Expiring time of the user code in seconds</summary>
-        [DataMember(IsRequired = true, Order = 3, Name = "expires_in")]
         public int expiry;
         /// <summary>Minimum verification poll rate in seconds</summary>
-        [DataMember(IsRequired = true, Order = 4, Name = "interval")]
         public int pollRate;
+        #endregion
+
+        #region Constructors
+        /// <summary>
+        /// Forces usage of static factory method
+        /// </summary>
+        private OAuthDeviceFlowResponse() { }
+        #endregion
+
+        #region Static methods
+        /// <summary>
+        /// Parses an OAuth Device Flow response from an Form URL Encoded object
+        /// </summary>
+        /// <param name="form">Form URL Encoded string</param>
+        /// <returns>The resulting OAuth Device Flow response</returns>
+        /// <exception cref="ArgumentNullException">If <paramref name="form"/> is <see langword="null"/></exception>
+        public static OAuthDeviceFlowResponse FromFormString(string form)
+        {
+            if (form == null) throw new ArgumentNullException(nameof(form), "Form string cannot be null");
+
+            OAuthDeviceFlowResponse response = new OAuthDeviceFlowResponse();
+            foreach (string parameter in form.Split('&'))
+            {
+                string[] pair = parameter.Split('=');
+                if (pair.Length == 2)
+                {
+                    string value = Uri.UnescapeDataString(pair[1]);
+                    switch (pair[0])
+                    {
+                        case "device_code":
+                            response.deviceCode = value;
+                            break;
+
+                        case "user_code":
+                            response.userCode = value;
+                            break;
+
+                        case "verification_uri":
+                            response.verificationUrl = value;
+                            break;
+
+                        case "expires_in":
+                            response.expiry = int.Parse(value);
+                            break;
+
+                        case "interval":
+                            response.pollRate = int.Parse(value);
+                            break;
+                    }
+                }
+            }
+
+            return response;
+        }
         #endregion
     }
 }

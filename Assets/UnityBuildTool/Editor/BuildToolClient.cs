@@ -17,7 +17,7 @@ namespace UnityBuildTool
         ///<summary>
         /// JSON app media REST header
         /// </summary>
-        public static MediaTypeHeaderValue JsonHeader { get; } = new MediaTypeHeaderValue("application/json");
+        public static MediaTypeHeaderValue JsonHeader { get; } = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
         #endregion
     }
 }

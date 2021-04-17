@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8614acfafab2be0408a2deaaf22fbfb7, type: 3}
   m_Name: BuildToolSettings
   m_EditorClassIdentifier: 
-  buildRepository: 
+  buildRepository: ChrisViral/ViralCurse
   useWebService: 0
   versionURL: 
   developmentBuild: 0

@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Octokit;
+using UnityBuildTool.DeviceFlow;
 using UnityBuildTool.Extensions;
 using UnityBuildTool.UI;
 using UnityEditor;
@@ -24,10 +25,8 @@ namespace UnityBuildTool
     /// <summary>
     /// GitHub Authenticator utility to create and manage Authorization Tokens
     /// </summary>
-    public sealed class GitHubAuthenticator
+    public sealed class GitHubAuthenticator : ICredentialStore
     {
-        private const string CLIENT_ID = "907b67dfbc8ba4f5af77";
-
         /// <summary>
         /// Indicates the connection status of the GitHub client
         /// </summary>
@@ -35,9 +34,8 @@ namespace UnityBuildTool
         {
             NONE,
             NOT_CONNECTED,
-            BAD_CREDENTIALS,
-            REQUIRES_2FA,
-            FAILED_2FA,
+            BAD_TOKEN,
+            AWAITING_VERIFICATION,
             CONNECTED
         }
 
@@ -65,21 +63,23 @@ namespace UnityBuildTool
             public bool Equals(User a, User b) => string.Equals(a?.Login, b?.Login);
 
             /// <inheritdoc/>
-            public int GetHashCode(User user) => (int)user?.Login.GetHashCode();
+            public int GetHashCode(User user) => user.Login.GetHashCode();
             #endregion
         }
 
         #region Constants
         /// <summary>Name of the applet</summary>
-        private const string appName = "unity-build-tool";
+        private const string appName  = "unity-build-tool";
+        /// <summary>Application version</summary>
+        private const string appVersion  = "0.1.0.0";
+        /// <summary>Application client ID</summary>
+        private const string clientID = "907b67dfbc8ba4f5af77";
         /// <summary>Name of the stored credentials file</summary>
         private const string fileName = "ubt.bin";
-        /// <summary>Format of the saved date time</summary>
-        private const string timeFormat = "dd/MM/yy-HH:mm:ss";
         /// <summary>GitHub permission scopes</summary>
         private static readonly string[] scopes = { "repo", "read:user", "user:email" };
         /// <summary>User repositories requests settings</summary>
-        private static readonly RepositoryRequest request = new RepositoryRequest
+        private static readonly RepositoryRequest repositoryRequest = new RepositoryRequest
         {
             Direction = SortDirection.Ascending,
             Sort      = RepositorySort.FullName,
@@ -87,8 +87,6 @@ namespace UnityBuildTool
         };
         /// <summary>Path to the credentials file location on the disk</summary>
         private static readonly string filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "UnityBuildTool", fileName);
-        /// <summary>Assembly version of the BuildTool</summary>
-        private static readonly string assemblyVersion = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion;
         /// <summary>Unique Entropy used to encrypt the token to the disk</summary>
         private static readonly byte[] entropy;
 
@@ -115,11 +113,6 @@ namespace UnityBuildTool
                 File.WriteAllBytes(filePath, ProtectedData.Protect(Encoding.ASCII.GetBytes(value), entropy, DataProtectionScope.CurrentUser));
             }
         }
-
-        /// <summary>
-        /// Creates a new application authorization to the GitHub API
-        /// </summary>
-        private static NewAuthorization Authorization => new NewAuthorization($"{appName}-{Environment.MachineName}-{DateTime.Now.ToString(timeFormat, CultureInfo.InvariantCulture)}", scopes);
         #endregion
 
         #region Properties
@@ -139,9 +132,18 @@ namespace UnityBuildTool
             {
                 this.status = value;
                 this.window.UIEnabled = true;
-                this.window.Repaint();
             }
         }
+
+        /// <summary>
+        /// OAuth verification user code
+        /// </summary>
+        public string UserCode { get; private set; }
+
+        /// <summary>
+        /// OAuth verification URL
+        /// </summary>
+        public string VerificationURL { get; private set; }
 
         /// <summary>
         /// Currently connected user
@@ -204,12 +206,18 @@ namespace UnityBuildTool
         public GitHubAuthenticator(BuildToolWindow window)
         {
             //Creates a new GitHub client
-            this.client = new GitHubClient(new ProductHeaderValue(appName, assemblyVersion));
+            this.client = new GitHubClient(new ProductHeaderValue(appName, appVersion), this);
             this.window = window;
         }
         #endregion
 
         #region Methods
+        /// <summary>
+        /// Gets the credentials from the file on disk
+        /// </summary>
+        /// <returns>A task to retrieve the credentials</returns>
+        public Task<Credentials> GetCredentials() => Task.FromResult(new Credentials(Token));
+
         /// <summary>
         /// Tries to connect to the API using the stored credentials file
         /// Can only be called once
@@ -226,10 +234,8 @@ namespace UnityBuildTool
                 this.Log("Loading user credentials...\n");
                 try
                 {
-                    //Load token and tries to connect
-                    this.client.Credentials = new Credentials(Token);
-                    TestConnection();
-
+                    //Test connection for errors
+                    await TestConnection();
                     //Fetch all repositories the user has access to
                     await FetchAllRepositories();
                     return;
@@ -257,75 +263,73 @@ namespace UnityBuildTool
         }
 
         /// <summary>
-        /// Submits the username and password credentials and attempts to login to the GitHub account
+        /// Starts the device flow OAuth process
         /// </summary>
-        /// <param name="username">Connection username</param>
-        /// <param name="password">Connection password</param>
-        public void SubmitCredentials(string username, string password)
-        {
-            //Create Username/Password credentials and attempt to request an access token
-            this.client.Credentials = new Credentials(username, password);
-            RequestToken();
-        }
+        public async void StartDeviceFlow() => await DeviceFlowAuth().ConfigureAwait(false);
 
         /// <summary>
-        /// Submits the Two Factor Authorization code and attempts to login
+        /// Device Flow OAuth task
         /// </summary>
-        /// <param name="twoFactorCode">Two Factor Authorization code</param>
-        public void Submit2FA(string twoFactorCode) => RequestToken(twoFactorCode);
-
-        /// <summary>
-        /// Requests an Authorization Token from Github
-        /// </summary>
-        /// <param name="twoFactorCode">Two Factor Authorization code to obtain authorization code</param>
-        private async void RequestToken(string twoFactorCode = null)
+        /// <returns>The authentication task</returns>
+        private async Task DeviceFlowAuth()
         {
-            //Store current credentials in case the new ones are invalid
-            Credentials previousCredentials = this.client.Credentials;
             try
             {
-                //Tries to get an Authorization Token, submitting the 2FA code if provided
-                ApplicationAuthorization auth = await (string.IsNullOrEmpty(twoFactorCode) ? this.client.Authorization.Create(Authorization) : this.client.Authorization.Create(Authorization, twoFactorCode));
+                //Request a user code first
+                OAuthDeviceFlowRequest request = new OAuthDeviceFlowRequest(clientID, scopes);
+                OAuthDeviceFlowResponse response = await this.client.Oauth.InitiateDeviceFlow(request).ConfigureAwait(false);
+                //Store user code and verification URL
+                this.UserCode = response.userCode;
+                this.VerificationURL = response.verificationUrl;
 
-                //Submit and test connection
-                this.client.Credentials = new Credentials(auth.Token);
-                TestConnection();
+                //Start verification process
+                this.Status = ConnectionStatus.AWAITING_VERIFICATION;
+                OAuthDeviceFlowTokenRequest tokenRequest = new OAuthDeviceFlowTokenRequest(clientID, response.deviceCode)
+                {
+                    expiry = DateTime.Now + TimeSpan.FromSeconds(response.expiry),
+                    pollRate = TimeSpan.FromSeconds(response.pollRate)
+                };
+                OAuthDeviceFlowTokenResponse tokenResponse = await this.client.Oauth.PollDeviceFlowAccessTokenResult(tokenRequest).ConfigureAwait(false);
 
-                //Save and encrypt the token
-                Token = auth.Token;
+                //Make sure the token is valid
+                if (string.IsNullOrEmpty(tokenResponse.accessToken))
+                {
+                    this.Status = ConnectionStatus.BAD_TOKEN;
+                    return;
+                }
 
-                //Fetch all repositories the user has access to
+                //Store token and clear from memory
+                Token = tokenResponse.accessToken;
+                //ReSharper disable once RedundantAssignment
+                tokenResponse = null;
+
+                //Test connection to GitHub
+                await TestConnection();
+                //Fetch all if successfully connected
                 await FetchAllRepositories();
+
+                //Clear UserCode and Verification URL
+                this.UserCode = null;
+                this.VerificationURL = null;
             }
-            catch (TwoFactorRequiredException)
+            catch (Exception e)
             {
-                //2FA Code required
-                if (string.IsNullOrEmpty(twoFactorCode))
+                this.LogException(e);
+                this.Status = ConnectionStatus.BAD_TOKEN;
+
+                //Delete existing credentials if they are on the disk
+                if (File.Exists(filePath))
                 {
-                    this.LogWarning("Login requires 2FA code");
-                    this.Status = ConnectionStatus.REQUIRES_2FA;
+                    File.Delete(filePath);
+                    this.Log("Deleting credentials file from disk");
                 }
-                //2FA Code invalid
-                else
-                {
-                    this.LogWarning("Two Factor Code invalid");
-                    this.Status = ConnectionStatus.FAILED_2FA;
-                }
-                this.client.Credentials = previousCredentials;
-            }
-            catch (AuthorizationException)
-            {
-                //Invalid token/username-password combo
-                this.LogError("Invalid credentials");
-                this.Status = ConnectionStatus.BAD_CREDENTIALS;
-                this.client.Credentials = previousCredentials;
             }
         }
 
         /// <summary>
         /// Tests the validity of the connection to GitHub
         /// </summary>
-        private async void TestConnection()
+        private async Task TestConnection()
         {
             //Get current user and email to see if the connection worked
             this.User = await this.client.User.Current();
@@ -343,7 +347,7 @@ namespace UnityBuildTool
         private async Task FetchAllRepositories()
         {
             //Request user repositories
-            IReadOnlyList<Repository> userRepositories = await this.client.Repository.GetAllForCurrent(request);
+            IReadOnlyList<Repository> userRepositories = await this.client.Repository.GetAllForCurrent(repositoryRequest);
 
             //Get all accessible repositories for this user, store in repo owner/repos structure
             Dictionary<User, List<RepositoryInfo>> repoOwners = new Dictionary<User, List<RepositoryInfo>>(UserEqualityComparer.Comparer);
@@ -380,7 +384,6 @@ namespace UnityBuildTool
 
             //Set fetch flag and repaint the UI
             this.RepositoriesFetched = true;
-            this.window.Repaint();
 
             //Print the information fetched
             this.Log($"{this.Selector.TotalRepos} repositories fetched for {this.User.Login}");
