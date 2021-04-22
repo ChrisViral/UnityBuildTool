@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Octokit;
-using UnityBuildTool.Extensions;
 using UnityEditor;
 using UnityEngine;
 
@@ -95,11 +93,10 @@ namespace UnityBuildTool.UI
         public void OnGUI()
         {
             //Repository selection scrollview
-            using (new EditorGUILayout.VerticalScope())
+            using (VerticalScope.Enter())
             {
-                using (EditorGUILayout.ScrollViewScope scrollView = new EditorGUILayout.ScrollViewScope(this.scroll, false, false, GUIStyle.none, GUI.skin.verticalScrollbar, GUI.skin.scrollView, scrollOptions))
+                using (ScrollViewScope.Enter(ref this.scroll, false, false, GUIStyle.none, GUI.skin.verticalScrollbar, EditorStyles.helpBox, scrollOptions))
                 {
-                    this.scroll = scrollView.scrollPosition;
                     //Owner panels
                     foreach (RepositoryOwner owner in this.owners)
                     {
@@ -115,7 +112,7 @@ namespace UnityBuildTool.UI
                 }
                 GUILayout.FlexibleSpace();
             }
-            GUILayout.Space(20f);
+            GUILayout.Space(10f);
         }
         #endregion
     }

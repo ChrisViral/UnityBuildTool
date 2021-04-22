@@ -91,37 +91,34 @@ namespace UnityBuildTool.UI
         public bool Select()
         {
             //Foldout group
-            using (new EditorGUILayout.VerticalScope(GUILayout.Width(425f)))
+            using (VerticalScope.Enter(GUILayout.Width(425f)))
+            using (FoldoutHeaderScope.Enter(this.fadeBool, this.foldoutTitle))
+            using (FadeGroupScope.Enter(this.fadeBool.faded, out bool visible))
             {
-                this.fadeBool.target = EditorGUILayout.BeginFoldoutHeaderGroup(this.fadeBool.target, this.foldoutTitle);
-
-                using (EditorGUILayout.FadeGroupScope fade = new EditorGUILayout.FadeGroupScope(this.fadeBool.faded))
+                if (visible)
                 {
-                    if (fade.visible)
+                    //Check for repository selection
+                    bool oneSelected = false;
+                    EditorGUI.indentLevel++;
+                    //Display the repositories of the owner
+                    foreach (RepositoryInfo repo in this.Repositories)
                     {
-                        //Check for repository selection
-                        bool oneSelected = false;
-                        EditorGUI.indentLevel++;
-                        //Display the repositories of the owner
-                        foreach (RepositoryInfo repo in this.Repositories)
+                        //If the repo is toggled
+                        if (repo.Toggle())
                         {
-                            //If the repo is toggled
-                            if (repo.Toggle())
-                            {
-                                //Flag and set selection
-                                oneSelected = true;
-                                this.Selected = repo;
-                            }
-                        }
-                        EditorGUI.indentLevel--;
-                        //If none is selected, make sure the selection is null
-                        if (!oneSelected)
-                        {
-                            this.Selected = null;
+                            //Flag and set selection
+                            oneSelected = true;
+                            this.Selected = repo;
                         }
                     }
+
+                    EditorGUI.indentLevel--;
+                    //If none is selected, make sure the selection is null
+                    if (!oneSelected)
+                    {
+                        this.Selected = null;
+                    }
                 }
-                EditorGUILayout.EndFoldoutHeaderGroup();
             }
 
             //Return true if any is selected

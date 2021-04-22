@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -42,18 +43,6 @@ namespace UnityBuildTool.UI
         /// Path to the BuildFile on the disk
         /// </summary>
         public static string BuildFilePath { get; private set; }
-
-        private static GUIStyle refreshButtonStyle;
-        /// <summary>
-        /// The style used for the Refresh button
-        /// </summary>
-        private static GUIStyle RefreshButtonStyle => refreshButtonStyle ?? (refreshButtonStyle = new GUIStyle(GUI.skin.button)
-        {
-            fontStyle = FontStyle.Bold,
-            fontSize = 16,
-            normal = { textColor = StylesUtils.Green },
-            active = { textColor = StylesUtils.Green }
-        });
         #endregion
 
         #region Fields
@@ -145,7 +134,7 @@ namespace UnityBuildTool.UI
         private void Init()
         {
             //Load the settings file
-            BuildFilePath = Path.Combine(Directory.GetParent(BuildToolUtils.DataPath).FullName, BuildToolUtils.ProductName.ToLowerInvariant() + BuildVersion.EXTENSION);
+            BuildFilePath = Path.Combine(Directory.GetParent(BuildToolUtils.DataPath)?.FullName ?? string.Empty, BuildToolUtils.ProductName.ToLowerInvariant() + BuildVersion.EXTENSION);
             this.settings = BuildToolSettings.Load();
 
             //Load all secondary objects
@@ -242,7 +231,7 @@ namespace UnityBuildTool.UI
         /// </summary>
         /// <param name="success">Array containing the fail/pass status of each target build</param>
         /// <param name="token">CancellationToken to cancel the ongoing task</param>
-        private async Task PostBuildAsync(bool[] success, CancellationToken token)
+        private async Task PostBuildAsync(IReadOnlyList<bool> success, CancellationToken token)
         {
             //Get the builds folder path
             string buildsFolder = Path.Combine(BuildToolUtils.ProjectFolderPath, this.Settings.OutputFolder);
@@ -303,7 +292,7 @@ namespace UnityBuildTool.UI
                             copyToPath = buildAppData;
                             break;
                         case BuildItem.CopyLocation.WithAppData:
-                            copyToPath = Directory.GetParent(buildAppData).FullName;
+                            copyToPath = Directory.GetParent(buildAppData)?.FullName ?? string.Empty;
                             break;
                     }
                     try
@@ -467,9 +456,9 @@ namespace UnityBuildTool.UI
             }
             else
             {
-                using (new EditorGUILayout.HorizontalScope())
+                using (HorizontalScope.Enter())
                 {
-                    using (new EditorGUILayout.VerticalScope(GUILayout.Width(450f)))
+                    using (VerticalScope.Enter(GUILayout.Width(450f)))
                     {
                         EditorGUILayout.Space();
                         //API URL selection
@@ -481,10 +470,10 @@ namespace UnityBuildTool.UI
 
                         //Refresh button
                         GUILayout.FlexibleSpace();
-                        using (new EditorGUILayout.HorizontalScope())
+                        using (HorizontalScope.Enter())
                         {
                             GUILayout.FlexibleSpace();
-                            if (GUILayout.Button(refreshButton, RefreshButtonStyle, GUILayout.Width(200f), GUILayout.Height(40f)))
+                            if (GUILayout.Button(refreshButton, StylesUtils.RefreshButtonStyle, GUILayout.Width(200f), GUILayout.Height(40f)))
                             {
                                 RefreshConnection();
                                 return;
@@ -494,7 +483,7 @@ namespace UnityBuildTool.UI
                         EditorGUILayout.Space(10f);
                     }
 
-                    using (new EditorGUILayout.VerticalScope())
+                    using (VerticalScope.Enter())
                     {
                         //Release creator
                         this.buildHandler.ReleaseCreator();

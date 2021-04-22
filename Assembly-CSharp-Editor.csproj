@@ -77,6 +77,7 @@
     <Compile Include="Assets\UnityBuildTool\Editor\UI\BuildHandler.cs" />
     <Compile Include="Assets\UnityBuildTool\Editor\UI\RepositorySelector.cs" />
     <Compile Include="Assets\UnityBuildTool\Editor\UI\StylesUtils.cs" />
+    <Compile Include="Assets\UnityBuildTool\Editor\UI\ScopeProvider.cs" />
   </ItemGroup>
   <ItemGroup>
      <None Include="Assets\UnityBuildTool\Editor\Plugins\Octokit.dll" />

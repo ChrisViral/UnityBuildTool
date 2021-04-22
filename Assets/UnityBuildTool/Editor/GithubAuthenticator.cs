@@ -108,7 +108,7 @@ namespace UnityBuildTool
             set
             {
                 //Make sure the folder exists
-                Directory.GetParent(filePath).Create();
+                Directory.GetParent(filePath)?.Create();
                 //Save the token
                 File.WriteAllBytes(filePath, ProtectedData.Protect(Encoding.ASCII.GetBytes(value), entropy, DataProtectionScope.CurrentUser));
             }

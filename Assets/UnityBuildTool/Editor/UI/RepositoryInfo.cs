@@ -63,9 +63,9 @@ namespace UnityBuildTool.UI
             }
 
             //Fade in/out
-            using (EditorGUILayout.FadeGroupScope fade = new EditorGUILayout.FadeGroupScope(this.fadeBool.faded))
+            using (FadeGroupScope.Enter(this.fadeBool.faded, out bool visible))
             {
-                if (fade.visible)
+                if (visible)
                 {
                     //Display repository info when selected
                     EditorGUI.indentLevel++;

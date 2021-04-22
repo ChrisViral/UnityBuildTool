@@ -1,11 +1,9 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using Octokit;
 using UnityBuildTool.Extensions;
 using UnityEditor;
 using UnityEditor.AnimatedValues;
 using UnityEngine;
-using BuildAPIStatus = UnityBuildTool.UI.BuildToolWindow.BuildAPIStatus;
 using VersionBump = UnityBuildTool.BuildVersion.VersionBump;
 
 namespace UnityBuildTool.UI
@@ -62,11 +60,6 @@ namespace UnityBuildTool.UI
         }
 
         #region Constants
-        /// <summary>
-        /// Array containing the GUIStyles of labels indicating the connection of the webservice
-        /// </summary>
-        private static readonly Dictionary<BuildAPIStatus, (string, GUIStyle)> connectionStyles = new Dictionary<BuildAPIStatus, (string, GUIStyle)>(3);
-
         //GUIContent labels
         private static readonly GUIContent useURL               = new GUIContent("Use Version Service",   "If a webservice hosting the version object should be used");
         private static readonly GUIContent url                  = new GUIContent("Version URL:",          "URL of the web API where the version data is stored");
@@ -84,12 +77,6 @@ namespace UnityBuildTool.UI
         private static readonly GUIContent buildButton          = new GUIContent("BUILD",                 "Build the game for the selected targets and release to GitHub");
         private static readonly GUIContent copyLabel            = new GUIContent("Files/Folders to copy", "Files and folders that should be copied over when building the game");
         private static readonly GUIContent deleteEntry          = new GUIContent("X",                     "Delete this entry to copy on build");
-        #endregion
-
-        #region Static fields
-        //GUI Styles
-        private static bool initStyles;
-        private static GUIStyle titleStyle, titleFieldStyle, descriptionLabelStyle, descriptionFieldStyle, centeredLabelStyle, centeredPopupStyle, deleteButtonStyle, buildButtonStyle;
         #endregion
 
         #region Fields
@@ -139,61 +126,6 @@ namespace UnityBuildTool.UI
         }
         #endregion
 
-        #region Static methods
-        /// <summary>
-        /// Initializes various used GUIStyles
-        /// </summary>
-        private static void InitStyles()
-        {
-            if (!initStyles)
-            {
-                //Make sure we only init once
-                initStyles = true;
-
-                //Connection label styles
-                connectionStyles.Add(BuildAPIStatus.NOT_CONNECTED, ("Not Connected", EditorStyles.boldLabel));
-                connectionStyles.Add(BuildAPIStatus.ERROR,         ("Error",     new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = StylesUtils.Red } }));
-                connectionStyles.Add(BuildAPIStatus.CONNECTED,     ("Connected", new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = StylesUtils.Green } }));
-
-                //Release styles
-                titleStyle = new GUIStyle(EditorStyles.boldLabel)
-                {
-                    fontSize = 20,
-                    alignment = TextAnchor.MiddleLeft
-                };
-                titleFieldStyle = new GUIStyle(EditorStyles.textField)
-                {
-                    fontSize = 16,
-                    alignment = TextAnchor.MiddleLeft,
-                    fontStyle = FontStyle.Bold
-                };
-                descriptionLabelStyle = new GUIStyle(EditorStyles.boldLabel)
-                {
-                    fontSize = 14,
-                    alignment = TextAnchor.MiddleLeft
-
-                };
-                descriptionFieldStyle = new GUIStyle(EditorStyles.textArea) { fontSize = 13 };
-                centeredLabelStyle = new GUIStyle(EditorStyles.boldLabel) { alignment = TextAnchor.MiddleCenter };
-                centeredPopupStyle = new GUIStyle(EditorStyles.popup) { alignment = TextAnchor.MiddleCenter };
-                deleteButtonStyle = new GUIStyle(EditorStyles.miniButton)
-                {
-                    fontStyle = FontStyle.Bold,
-                    normal = { textColor = Color.white },
-                    active = { textColor = Color.white }
-                };
-                buildButtonStyle = new GUIStyle(GUI.skin.button)
-                {
-                    alignment = TextAnchor.MiddleCenter,
-                    fontStyle = FontStyle.Bold,
-                    fontSize = 24,
-                    normal = { textColor = Color.white },
-                    active = { textColor = Color.white }
-                };
-            }
-        }
-        #endregion
-
         #region Methods
         /// <summary>
         /// Makes sure the branch selector is loaded correctly
@@ -224,9 +156,6 @@ namespace UnityBuildTool.UI
         /// </summary>
         public void URLSelector()
         {
-            //Make sure styles are initiated
-            InitStyles();
-
             //Fade group
             this.urlUsed.target = EditorGUILayout.ToggleLeft(useURL, this.urlUsed.target);
             this.window.SerializedSettings.FindProperty(BuildToolSettings.USE_WEB_SERVICE_NAME).boolValue = this.urlUsed.target;
@@ -236,19 +165,19 @@ namespace UnityBuildTool.UI
                 this.apiURL = string.Empty;
             }
 
-            using (EditorGUILayout.FadeGroupScope fade = new EditorGUILayout.FadeGroupScope(this.urlUsed.faded))
+            using (FadeGroupScope.Enter(this.urlUsed.faded, out bool visible))
             {
-                if (fade.visible)
+                if (visible)
                 {
                     //Get URL
                     EditorGUI.indentLevel++;
                     EditorGUIUtility.labelWidth = 95f;
                     this.apiURL = EditorGUILayout.TextField(url, this.apiURL, GUILayout.Width(426f));
                     EditorGUIUtility.labelWidth = 0f;
-                    using (new EditorGUILayout.HorizontalScope())
+                    using (HorizontalScope.Enter())
                     {
                         //Display coloured connection label
-                        (string label, GUIStyle style) = connectionStyles[this.window.APIStatus];
+                        (string label, GUIStyle style) = StylesUtils.ConnectionStyles[this.window.APIStatus];
                         EditorGUILayout.LabelField(label, style, GUILayout.Width(91f));
                         //Disable connection when the URL hasn't changed
                         GUI.enabled = this.window.UIEnabled && !string.IsNullOrEmpty(this.apiURL) && this.apiURL != this.window.Settings.VersionURL;
@@ -272,9 +201,6 @@ namespace UnityBuildTool.UI
         /// </summary>
         public void ReleaseCreator()
         {
-            //Make sure styles are initiated
-            InitStyles();
-
             //Only display UI if the branches have been loaded and the build version exists
             bool branchesNotLoaded = this.window.Authenticator.FetchingBranches || this.window.Authenticator.CurrentBranches is null;
             if (branchesNotLoaded || this.window.BuildVersion is null)
@@ -297,12 +223,12 @@ namespace UnityBuildTool.UI
             GUI.enabled = this.window.UIEnabled && this.window.Settings.PublishRelease;
 
             //Header
-            EditorGUILayout.LabelField(header, titleStyle, GUILayout.Height(30f), GUILayout.Width(150f));
+            EditorGUILayout.LabelField(header, StylesUtils.TitleLabelStyle, GUILayout.Height(30f), GUILayout.Width(150f));
             EditorGUILayout.Space();
             //Title field
-            this.title = EditorGUILayout.TextField(string.Empty, this.title, titleFieldStyle, GUILayout.Height(25f));
+            this.title = EditorGUILayout.TextField(string.Empty, this.title, StylesUtils.TitleFieldStyle, GUILayout.Height(25f));
             EditorGUILayout.Space(EditorGUIUtility.standardVerticalSpacing * 2f);
-            using (new EditorGUILayout.HorizontalScope())
+            using (HorizontalScope.Enter())
             {
 
                 GUI.enabled = this.window.UIEnabled && this.window.Settings.PublishRelease;
@@ -320,15 +246,16 @@ namespace UnityBuildTool.UI
             EditorGUIUtility.labelWidth = 0f;
             EditorGUILayout.Space();
             //Release description
-            EditorGUILayout.LabelField(descriptionLabel, descriptionLabelStyle, GUILayout.Width(100f), GUILayout.Height(30f));
-            this.description = EditorGUILayout.TextArea(this.description, descriptionFieldStyle, GUILayout.ExpandHeight(true), GUILayout.ExpandWidth(true));
+            EditorGUILayout.LabelField(descriptionLabel, StylesUtils.DescriptionLabelStyle, GUILayout.Width(100f), GUILayout.Height(30f));
+            this.description = EditorGUILayout.TextArea(this.description, StylesUtils.DescriptionFieldStyle, GUILayout.ExpandHeight(true), GUILayout.ExpandWidth(true));
 
             //Display bottom Build UI
-            using (new EditorGUILayout.HorizontalScope())
+            using (HorizontalScope.Enter())
             {
-                using (new EditorGUILayout.VerticalScope())
+                using (VerticalScope.Enter())
                 {
                     //Prerelease/draft toggles
+                    EditorGUILayout.Space(15f);
                     this.prerelease = EditorGUILayout.ToggleLeft(prereleaseToggle, this.prerelease);
                     this.draft = EditorGUILayout.ToggleLeft(draftToggle, this.draft);
                     GUI.enabled = this.window.UIEnabled;
@@ -339,16 +266,16 @@ namespace UnityBuildTool.UI
                     prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.DEVELOPMENT_BUILD_NAME);
                     prop.boolValue = EditorGUILayout.ToggleLeft(devBuildToggle, prop.boolValue);
                     //Version bump settings
-                    using (new EditorGUILayout.HorizontalScope())
+                    using (HorizontalScope.Enter())
                     {
                         EditorGUILayout.LabelField(bumpLabel, GUILayout.Width(109f));
                         GUI.enabled = false;
                         EditorGUILayout.TextField(this.window.BuildVersion.GetBumpedVersionString(this.bump), GUILayout.Width(188f));
                         GUI.enabled = this.window.UIEnabled;
-                        this.bump = (VersionBump)EditorGUILayout.EnumPopup(this.bump, centeredPopupStyle, GUILayout.Width(70f));
+                        this.bump = (VersionBump)EditorGUILayout.EnumPopup(this.bump, StylesUtils.CenteredPopupStyle, GUILayout.Width(70f));
                     }
 
-                    using (new EditorGUILayout.HorizontalScope())
+                    using (HorizontalScope.Enter())
                     {
                         //Output folder property
                         prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.OUTPUT_FOLDER_NAME);
@@ -373,10 +300,10 @@ namespace UnityBuildTool.UI
                     //Target flags selection
                     prop.intValue = (int)(BuildTargetFlags)EditorGUILayout.EnumFlagsField(buildTargetsLabel, (BuildTargetFlags)prop.intValue, GUILayout.Width(375f));
                     EditorGUIUtility.labelWidth = 0f;
-                    GUILayout.Space(57f);
+                    EditorGUILayout.Space(30f);
                     //Build button
                     GUI.backgroundColor = StylesUtils.Green;
-                    if (GUILayout.Button(buildButton, buildButtonStyle, GUILayout.Height(60f), GUILayout.Width(375f)))
+                    if (GUILayout.Button(buildButton, StylesUtils.BuildButtonStyle, GUILayout.Height(60f), GUILayout.Width(375f)))
                     {
                         if ((BuildTargetFlags)prop.intValue == BuildTargetFlags.None)
                         {
@@ -397,28 +324,26 @@ namespace UnityBuildTool.UI
                             }
                         }
                     }
-
                     GUI.backgroundColor = Color.white;
                 }
 
-                using (new EditorGUILayout.VerticalScope())
+                using (VerticalScope.Enter())
                 {
                     //Copy files and folders panel header
-                    EditorGUILayout.LabelField(copyLabel, centeredLabelStyle);
+                    EditorGUILayout.LabelField(copyLabel, StylesUtils.CenteredLabelStyle);
                     SerializedProperty prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.COPY_ON_BUILD_NAME);
                     //List scrollview
-                    using (EditorGUILayout.ScrollViewScope scrollView = new EditorGUILayout.ScrollViewScope(this.scroll, false, false, GUI.skin.horizontalScrollbar, GUI.skin.verticalScrollbar, StylesUtils.BackgroundStyle, GUILayout.Height(200f), GUILayout.MinWidth(400f)))
+                    using (ScrollViewScope.Enter(ref this.scroll, false, false, GUI.skin.horizontalScrollbar, GUI.skin.verticalScrollbar, EditorStyles.helpBox, GUILayout.Height(200f), GUILayout.MinWidth(400f)))
                     {
-                        this.scroll = scrollView.scrollPosition;
                         int index = 0, toDelete = -1;
                         //List all folders and files to copy
                         foreach (SerializedProperty toCopy in prop)
                         {
-                            using (new EditorGUILayout.HorizontalScope())
+                            using (HorizontalScope.Enter())
                             {
                                 //Delete entry button
                                 GUI.backgroundColor = StylesUtils.Red;
-                                if (GUILayout.Button(deleteEntry, deleteButtonStyle, GUILayout.Width(20f)))
+                                if (GUILayout.Button(deleteEntry, StylesUtils.DeleteButtonStyle, GUILayout.Width(20f)))
                                 {
                                     //Store index to delete it later (else it breaks the enumeration
                                     toDelete = index;
@@ -449,10 +374,9 @@ namespace UnityBuildTool.UI
                         }
                     }
 
-                    GUILayout.Space(5f);
-                    using (new EditorGUILayout.HorizontalScope())
+                    EditorGUILayout.Space(5f);
+                    using (HorizontalScope.Enter())
                     {
-                        GUILayout.Space(4f);
                         //Add file browser
                         if (GUILayout.Button("Add file...", EditorStyles.miniButton))
                         {
@@ -469,7 +393,7 @@ namespace UnityBuildTool.UI
                             }
                         }
 
-                        GUILayout.Space(10f);
+                        EditorGUILayout.Space(10f);
                         if (GUILayout.Button("Add folder...", EditorStyles.miniButton))
                         {
                             //Get relative path
@@ -484,13 +408,10 @@ namespace UnityBuildTool.UI
                                 item.stringValue = relative;
                             }
                         }
-
-                        GUILayout.Space(12f);
                     }
-
-                    GUILayout.Space(15f);
                 }
             }
+            EditorGUILayout.Space(15f);
         }
         #endregion
     }
