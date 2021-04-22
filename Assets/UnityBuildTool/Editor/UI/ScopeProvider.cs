@@ -63,7 +63,7 @@ namespace UnityBuildTool.UI
         /// </summary>
         /// <param name="options">Layout options</param>
         /// <returns>The disposable implementation that exists the scope</returns>
-        public static VerticalScope Enter(params GUILayoutOption[] options)
+        public static IDisposable Enter(params GUILayoutOption[] options)
         {
             EditorGUILayout.BeginVertical(options);
             return provider;
@@ -75,7 +75,7 @@ namespace UnityBuildTool.UI
         /// <param name="style">Style of the scope</param>
         /// <param name="options">Layout options</param>
         /// <returns>The disposable implementation that exists the scope</returns>
-        public static VerticalScope Enter(GUIStyle style, params GUILayoutOption[] options)
+        public static IDisposable Enter(GUIStyle style, params GUILayoutOption[] options)
         {
             EditorGUILayout.BeginVertical(style, options);
             return provider;
