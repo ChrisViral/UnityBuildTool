@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Octokit;
+using UnityBuildTool.Extensions;
 using UnityEditor;
 using UnityEngine;
 
@@ -109,10 +111,7 @@ namespace UnityBuildTool.UI
                     }
 
                     //Set the selected repository
-                    if (this.SelectedOwner != null)
-                    {
-                        this.SelectedRepository = this.SelectedOwner.Selected.Repository;
-                    }
+                    this.SelectedRepository = this.SelectedOwner?.Selected?.Repository;
                 }
                 GUILayout.FlexibleSpace();
             }

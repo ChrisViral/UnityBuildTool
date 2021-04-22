@@ -36,6 +36,7 @@ namespace UnityBuildTool
 
             //Get original info in main thread
             BuildTarget originalTarget = EditorUserBuildSettings.activeBuildTarget;
+            string[] scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
 
             //Progressbar
             int current = 0;
@@ -51,7 +52,7 @@ namespace UnityBuildTool
 
                 try
                 {
-                    Build(settings, target);
+                    Build(settings, target, scenes);
                     success[current] = true;
                 }
                 catch (BuildFailedException e)
@@ -75,8 +76,9 @@ namespace UnityBuildTool
         /// </summary>
         /// <param name="settings">Settings to build for</param>
         /// <param name="target">Target to build</param>
+        /// <param name="scenes">Array of scenes to include in the build</param>
         /// <exception cref="BuildFailedException">If the build failed for any reason</exception>
-        public static void Build(BuildToolSettings settings, BuildTarget target)
+        public static void Build(BuildToolSettings settings, BuildTarget target, string[] scenes)
         {
             //Get some info on the build
             string targetName = BuildToolUtils.GetBuildTargetName(target);
@@ -84,13 +86,13 @@ namespace UnityBuildTool
             //Create the build options
             BuildPlayerOptions options = new BuildPlayerOptions
             {
-                scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray(),
+                scenes = scenes,
                 locationPathName = Path.Combine(parentDirectory, BuildToolUtils.ProductName),
                 target = target,
                 options = settings.DevelopmentBuild ? BuildOptions.Development : BuildOptions.None
             };
             //If on Windows, must add extension manually
-            if (target == BuildTarget.StandaloneWindows64)
+            if (target == BuildTarget.StandaloneWindows || target == BuildTarget.StandaloneWindows64)
             {
                 options.locationPathName += ".exe";
             }

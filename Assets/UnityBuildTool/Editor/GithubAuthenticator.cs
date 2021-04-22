@@ -71,7 +71,7 @@ namespace UnityBuildTool
         /// <summary>Name of the applet</summary>
         private const string appName  = "unity-build-tool";
         /// <summary>Application version</summary>
-        private const string appVersion  = "0.1.0.0";
+        private const string appVersion  = "0.2.0.0";
         /// <summary>Application client ID</summary>
         private const string clientID = "907b67dfbc8ba4f5af77";
         /// <summary>Name of the stored credentials file</summary>
@@ -371,10 +371,7 @@ namespace UnityBuildTool
 
             //Create owner UI objects from previous data
             List<RepositoryOwner> owners = new List<RepositoryOwner>(repoOwners.Count);
-            foreach (KeyValuePair<User, List<RepositoryInfo>>  owner  in repoOwners)
-            {
-                owners.Add(new RepositoryOwner(owner.Key, owner.Value, this.window));
-            }
+            owners.AddRange(repoOwners.Select(owner => new RepositoryOwner(owner.Key, owner.Value, this.window)));
             //Sort them for display purpose
             owners.Sort();
 
@@ -419,8 +416,11 @@ namespace UnityBuildTool
                         //If it is, put it in front
                         heads.Insert(0, (branch, commit));
                     }
-                    //Else put it at the end
-                    else { heads.Add((branch, commit)); }
+                    else
+                    {
+                        //Else put it at the end
+                        heads.Add((branch, commit));
+                    }
                 }
 
                 //Set branches list

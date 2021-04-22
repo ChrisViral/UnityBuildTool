@@ -46,10 +46,6 @@ namespace UnityBuildTool
             (BuildTargetFlags.OSX,      BuildTarget.StandaloneOSX),
             (BuildTargetFlags.Linux64,  BuildTarget.StandaloneLinux64),
         };
-        /// <summary>Red colour used throughout the UI</summary>
-        public static readonly Color Red = new Color(0.7f, 0.1f, 0.1f);
-        /// <summary>Green colour used throughout the UI</summary>
-        public static readonly Color Green = new Color(0.1f, 0.6f, 0.1f);
         /// <summary>The directory separator char as a string</summary>
         private static readonly string separatorString = Path.DirectorySeparatorChar.ToString();
         #endregion
@@ -69,29 +65,6 @@ namespace UnityBuildTool
         /// Full path of the project folder
         /// </summary>
         public static string ProjectFolderPath { get; } = Directory.GetParent(DataPath).FullName;
-
-        private static GUIStyle backgroundStyle;
-        /// <summary>
-        /// The background style of the selection UI
-        /// </summary>
-        public static GUIStyle BackgroundStyle
-        {
-            get
-            {
-                //Create the style if it hasn't been yet or the texture has unloaded
-                if (backgroundStyle is null || !backgroundStyle.normal.background)
-                {
-                    //Create a transparent black texture to apply shade
-                    Texture2D tex = new Texture2D(1, 1);
-                    tex.SetPixel(0, 0, new Color(0f, 0f, 0f, 0.1f));
-                    tex.Apply();
-                    //Create style
-                    backgroundStyle = new GUIStyle(GUI.skin.box) { normal = { background = tex } };
-                }
-                //Return the style
-                return backgroundStyle;
-            }
-        }
         #endregion
 
         #region Methods

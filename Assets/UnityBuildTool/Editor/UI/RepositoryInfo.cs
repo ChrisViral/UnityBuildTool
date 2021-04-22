@@ -56,7 +56,11 @@ namespace UnityBuildTool.UI
         public bool Toggle()
         {
             //Display toggle as repo name
-            this.fadeBool.target = EditorGUILayout.ToggleLeft(this.Repository.Name, this.fadeBool.target, EditorStyles.boldLabel);
+            bool requested = EditorGUILayout.ToggleLeft(this.Repository.Name, this.fadeBool.target, EditorStyles.boldLabel);
+            if (!this.Toggled)
+            {
+                this.Toggled = requested;
+            }
 
             //Fade in/out
             using (EditorGUILayout.FadeGroupScope fade = new EditorGUILayout.FadeGroupScope(this.fadeBool.faded))

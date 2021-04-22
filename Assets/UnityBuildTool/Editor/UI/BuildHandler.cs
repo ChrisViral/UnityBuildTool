@@ -152,8 +152,8 @@ namespace UnityBuildTool.UI
 
                 //Connection label styles
                 connectionStyles.Add(BuildAPIStatus.NOT_CONNECTED, ("Not Connected", EditorStyles.boldLabel));
-                connectionStyles.Add(BuildAPIStatus.ERROR,         ("Error",     new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = BuildToolUtils.Red } }));
-                connectionStyles.Add(BuildAPIStatus.CONNECTED,     ("Connected", new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = BuildToolUtils.Green } }));
+                connectionStyles.Add(BuildAPIStatus.ERROR,         ("Error",     new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = StylesUtils.Red } }));
+                connectionStyles.Add(BuildAPIStatus.CONNECTED,     ("Connected", new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = StylesUtils.Green } }));
 
                 //Release styles
                 titleStyle = new GUIStyle(EditorStyles.boldLabel)
@@ -282,8 +282,9 @@ namespace UnityBuildTool.UI
                 //Set the local branches to null to make sure the array is reinitialized when they have been fetched/repo has been changed
                 this.branches = null;
                 //Display info label
-                EditorGUILayout.Space();
-                EditorGUILayout.LabelField(branchesNotLoaded ? "Waiting for repository data to be loaded..." : "Waiting for valid BuildVersion from web API...", EditorStyles.boldLabel);
+                GUIContent label = new GUIContent(branchesNotLoaded ? "Waiting for repository data to be loaded..." : "Waiting for valid BuildVersion from web API...");
+                float width = EditorStyles.boldLabel.CalcSize(label).x;
+                EditorGUILayout.LabelField(label, EditorStyles.boldLabel, GUILayout.Width(width));
                 //Repaint to make sure the change appears as soon as possible
                 this.window.Repaint();
                 return;
@@ -294,203 +295,200 @@ namespace UnityBuildTool.UI
 
             //Display the release UI
             GUI.enabled = this.window.UIEnabled && this.window.Settings.PublishRelease;
-            using (new EditorGUILayout.VerticalScope())
+
+            //Header
+            EditorGUILayout.LabelField(header, titleStyle, GUILayout.Height(30f), GUILayout.Width(150f));
+            EditorGUILayout.Space();
+            //Title field
+            this.title = EditorGUILayout.TextField(string.Empty, this.title, titleFieldStyle, GUILayout.Height(25f));
+            EditorGUILayout.Space(EditorGUIUtility.standardVerticalSpacing * 2f);
+            using (new EditorGUILayout.HorizontalScope())
             {
 
-                //Header
-                EditorGUILayout.LabelField(header, titleStyle, GUILayout.Height(30f), GUILayout.Width(150f));
-                EditorGUILayout.Space();
-                //Title field
-                this.title = EditorGUILayout.TextField(string.Empty, this.title, titleFieldStyle, GUILayout.Height(25f));
-                EditorGUILayout.Space();
-                EditorGUILayout.Space();
-                using (new EditorGUILayout.HorizontalScope())
-                {
+                GUI.enabled = this.window.UIEnabled && this.window.Settings.PublishRelease;
+                //Branch selector
+                EditorGUIUtility.labelWidth = 45f;
+                this.selectedBranch = EditorGUILayout.Popup(branchSelector, this.selectedBranch, this.branches, GUILayout.Width(175f));
+                //Repository label
+                EditorGUIUtility.labelWidth = 15f;
+                EditorGUILayout.LabelField("in", this.window.Authenticator.CurrentRepository.FullName, EditorStyles.boldLabel);
+            }
 
-                    GUI.enabled = this.window.UIEnabled && this.window.Settings.PublishRelease;
-                    //Branch selector
-                    EditorGUIUtility.labelWidth = 45f;
-                    this.selectedBranch = EditorGUILayout.Popup(branchSelector, this.selectedBranch, this.branches, GUILayout.Width(175f));
-                    //Repository label
-                    EditorGUIUtility.labelWidth = 15f;
-                    EditorGUILayout.LabelField("in", this.window.Authenticator.CurrentRepository.FullName, EditorStyles.boldLabel);
+            EditorGUIUtility.labelWidth = 80f;
+            //Last commit on branch label
+            EditorGUILayout.LabelField("Last commit:", $"[{this.CurrentCommit.Sha.Substring(0, 7)}] {this.CurrentCommit.Commit.Message}");
+            EditorGUIUtility.labelWidth = 0f;
+            EditorGUILayout.Space();
+            //Release description
+            EditorGUILayout.LabelField(descriptionLabel, descriptionLabelStyle, GUILayout.Width(100f), GUILayout.Height(30f));
+            this.description = EditorGUILayout.TextArea(this.description, descriptionFieldStyle, GUILayout.ExpandHeight(true), GUILayout.ExpandWidth(true));
+
+            //Display bottom Build UI
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                using (new EditorGUILayout.VerticalScope())
+                {
+                    //Prerelease/draft toggles
+                    this.prerelease = EditorGUILayout.ToggleLeft(prereleaseToggle, this.prerelease);
+                    this.draft = EditorGUILayout.ToggleLeft(draftToggle, this.draft);
+                    GUI.enabled = this.window.UIEnabled;
+                    //Publish toggle
+                    SerializedProperty prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.PUBLISH_RELEASE_NAME);
+                    prop.boolValue = EditorGUILayout.ToggleLeft(publishToggle, prop.boolValue);
+                    //Dev build toggle
+                    prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.DEVELOPMENT_BUILD_NAME);
+                    prop.boolValue = EditorGUILayout.ToggleLeft(devBuildToggle, prop.boolValue);
+                    //Version bump settings
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        EditorGUILayout.LabelField(bumpLabel, GUILayout.Width(109f));
+                        GUI.enabled = false;
+                        EditorGUILayout.TextField(this.window.BuildVersion.GetBumpedVersionString(this.bump), GUILayout.Width(188f));
+                        GUI.enabled = this.window.UIEnabled;
+                        this.bump = (VersionBump)EditorGUILayout.EnumPopup(this.bump, centeredPopupStyle, GUILayout.Width(70f));
+                    }
+
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        //Output folder property
+                        prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.OUTPUT_FOLDER_NAME);
+                        //Output folder field
+                        EditorGUIUtility.labelWidth = 110f;
+                        EditorGUILayout.PropertyField(prop, outputDirectoryLabel, GUILayout.Width(300f));
+                        //Browse button
+                        if (GUILayout.Button("Browse...", EditorStyles.miniButton, GUILayout.Width(70f)))
+                        {
+                            //Get relative path to project folder
+                            string relative = BuildToolUtils.OpenProjectFolderPanel("Select build folder");
+                            //If the path has changed, apply it
+                            if (this.window.Settings.OutputFolder != relative)
+                            {
+                                prop.stringValue = relative;
+                            }
+                        }
+                    }
+
+                    //Target flags property
+                    prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.TARGET_FLAGS_NAME);
+                    //Target flags selection
+                    prop.intValue = (int)(BuildTargetFlags)EditorGUILayout.EnumFlagsField(buildTargetsLabel, (BuildTargetFlags)prop.intValue, GUILayout.Width(375f));
+                    EditorGUIUtility.labelWidth = 0f;
+                    GUILayout.Space(57f);
+                    //Build button
+                    GUI.backgroundColor = StylesUtils.Green;
+                    if (GUILayout.Button(buildButton, buildButtonStyle, GUILayout.Height(60f), GUILayout.Width(375f)))
+                    {
+                        if ((BuildTargetFlags)prop.intValue == BuildTargetFlags.None)
+                        {
+                            EditorUtility.DisplayDialog("Error", "Please select at least one target to build for", "Okay");
+                        }
+                        else if (this.window.Settings.PublishRelease && string.IsNullOrEmpty(this.title))
+                        {
+                            EditorUtility.DisplayDialog("Error", "Your GitHub release requires a title", "Okay");
+                        }
+                        else
+                        {
+                            //Confirm build
+                            string targets = string.Join("\n", BuildToolUtils.GetTargets((BuildTargetFlags)prop.intValue));
+                            if (EditorUtility.DisplayDialog("Building Game", "Building for the following targets:\n" + targets, "Build", "Cancel"))
+                            {
+                                this.window.StartBuild();
+                                return;
+                            }
+                        }
+                    }
+
+                    GUI.backgroundColor = Color.white;
                 }
 
-                EditorGUIUtility.labelWidth = 80f;
-                //Last commit on branch label
-                EditorGUILayout.LabelField("Last commit:", $"[{this.CurrentCommit.Sha.Substring(0, 7)}] {this.CurrentCommit.Commit.Message}");
-                EditorGUIUtility.labelWidth = 0f;
-                EditorGUILayout.Space();
-                //Release description
-                EditorGUILayout.LabelField(descriptionLabel, descriptionLabelStyle, GUILayout.Width(100f), GUILayout.Height(30f));
-                this.description = EditorGUILayout.TextArea(this.description, descriptionFieldStyle, GUILayout.ExpandHeight(true), GUILayout.ExpandWidth(true));
-
-                //Display bottom Build UI
-                using (new EditorGUILayout.HorizontalScope())
+                using (new EditorGUILayout.VerticalScope())
                 {
-                    using (new EditorGUILayout.VerticalScope())
+                    //Copy files and folders panel header
+                    EditorGUILayout.LabelField(copyLabel, centeredLabelStyle);
+                    SerializedProperty prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.COPY_ON_BUILD_NAME);
+                    //List scrollview
+                    using (EditorGUILayout.ScrollViewScope scrollView = new EditorGUILayout.ScrollViewScope(this.scroll, false, false, GUI.skin.horizontalScrollbar, GUI.skin.verticalScrollbar, StylesUtils.BackgroundStyle, GUILayout.Height(200f), GUILayout.MinWidth(400f)))
                     {
-                        //Prerelease/draft toggles
-                        this.prerelease = EditorGUILayout.ToggleLeft(prereleaseToggle, this.prerelease);
-                        this.draft = EditorGUILayout.ToggleLeft(draftToggle, this.draft);
-                        GUI.enabled = this.window.UIEnabled;
-                        //Publish toggle
-                        SerializedProperty prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.PUBLISH_RELEASE_NAME);
-                        prop.boolValue = EditorGUILayout.ToggleLeft(publishToggle, prop.boolValue);
-                        //Dev build toggle
-                        prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.DEVELOPMENT_BUILD_NAME);
-                        prop.boolValue = EditorGUILayout.ToggleLeft(devBuildToggle, prop.boolValue);
-                        //Version bump settings
-                        using (new EditorGUILayout.HorizontalScope())
+                        this.scroll = scrollView.scrollPosition;
+                        int index = 0, toDelete = -1;
+                        //List all folders and files to copy
+                        foreach (SerializedProperty toCopy in prop)
                         {
-                            EditorGUILayout.LabelField(bumpLabel, GUILayout.Width(106f));
-                            GUI.enabled = false;
-                            EditorGUILayout.TextField(this.window.BuildVersion.GetBumpedVersionString(this.bump), GUILayout.Width(190f));
-                            GUI.enabled = this.window.UIEnabled;
-                            this.bump = (VersionBump)EditorGUILayout.EnumPopup(this.bump, centeredPopupStyle, GUILayout.Width(70f));
-                        }
-
-                        using (new EditorGUILayout.HorizontalScope())
-                        {
-                            //Output folder property
-                            prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.OUTPUT_FOLDER_NAME);
-                            //Output folder field
-                            EditorGUIUtility.labelWidth = 110f;
-                            EditorGUILayout.PropertyField(prop, outputDirectoryLabel, GUILayout.Width(300f));
-                            //Browse button
-                            if (GUILayout.Button("Browse...", EditorStyles.miniButton, GUILayout.Width(70f)))
+                            using (new EditorGUILayout.HorizontalScope())
                             {
-                                //Get relative path to project folder
-                                string relative = BuildToolUtils.OpenProjectFolderPanel("Select build folder");
-                                //If the path has changed, apply it
-                                if (this.window.Settings.OutputFolder != relative)
+                                //Delete entry button
+                                GUI.backgroundColor = StylesUtils.Red;
+                                if (GUILayout.Button(deleteEntry, deleteButtonStyle, GUILayout.Width(20f)))
                                 {
-                                    prop.stringValue = relative;
+                                    //Store index to delete it later (else it breaks the enumeration
+                                    toDelete = index;
                                 }
-                            }
-                        }
 
-                        //Target flags property
-                        prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.TARGET_FLAGS_NAME);
-                        //Target flags selection
-                        prop.intValue = (int)(BuildTargetFlags)EditorGUILayout.EnumFlagsField(buildTargetsLabel, (BuildTargetFlags)prop.intValue, GUILayout.Width(375f));
-                        EditorGUIUtility.labelWidth = 0f;
-                        GUILayout.Space(57f);
-                        //Build button
-                        GUI.backgroundColor = BuildToolUtils.Green;
-                        if (GUILayout.Button(buildButton, buildButtonStyle, GUILayout.Height(60f), GUILayout.Width(375f)))
-                        {
-                            if ((BuildTargetFlags)prop.intValue == BuildTargetFlags.None)
-                            {
-                                EditorUtility.DisplayDialog("Error", "Please select at least one target to build for", "Okay");
-                            }
-                            else if (this.window.Settings.PublishRelease && string.IsNullOrEmpty(this.title))
-                            {
-                                EditorUtility.DisplayDialog("Error", "Your GitHub release requires a title", "Okay");
-                            }
-                            else
-                            {
-                                //Confirm build
-                                string targets = string.Join("\n", BuildToolUtils.GetTargets((BuildTargetFlags)prop.intValue));
-                                if (EditorUtility.DisplayDialog("Building Game", "Building for the following targets:\n" + targets, "Build", "Cancel"))
+                                GUI.backgroundColor = Color.white;
+                                //Entry to copy label
+                                toCopy.NextVisible(true); //Path
+                                string path = toCopy.stringValue;
+                                //Make sure the path isn't too long to be displayed
+                                if (path.Length > 40)
                                 {
-                                    this.window.StartBuild();
-                                    return;
+                                    path = path.Substring(0, 37) + "...";
                                 }
+
+                                EditorGUILayout.LabelField(new GUIContent(path, toCopy.stringValue));
+                                toCopy.NextVisible(true); //Location
+                                toCopy.intValue = (int)(BuildItem.CopyLocation)EditorGUILayout.EnumPopup((BuildItem.CopyLocation)toCopy.intValue, GUILayout.Width(100f));
                             }
+
+                            index++;
                         }
 
-                        GUI.backgroundColor = Color.white;
+                        //If an entry has been marked to delete, delete it now
+                        if (toDelete != -1)
+                        {
+                            prop.DeleteArrayElementAtIndex(toDelete);
+                        }
                     }
 
-                    using (new EditorGUILayout.VerticalScope())
+                    GUILayout.Space(5f);
+                    using (new EditorGUILayout.HorizontalScope())
                     {
-                        //Copy files and folders panel header
-                        EditorGUILayout.LabelField(copyLabel, centeredLabelStyle);
-                        SerializedProperty prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.COPY_ON_BUILD_NAME);
-                        //List scrollview
-                        using (EditorGUILayout.ScrollViewScope scrollView = new EditorGUILayout.ScrollViewScope(this.scroll, false, false, GUI.skin.horizontalScrollbar, GUI.skin.verticalScrollbar, BuildToolUtils.BackgroundStyle, GUILayout.Height(200f), GUILayout.MinWidth(400f)))
+                        GUILayout.Space(4f);
+                        //Add file browser
+                        if (GUILayout.Button("Add file...", EditorStyles.miniButton))
                         {
-                            this.scroll = scrollView.scrollPosition;
-                            int index = 0, toDelete = -1;
-                            //List all folders and files to copy
-                            foreach (SerializedProperty toCopy in prop)
+                            //Get relative path
+                            string relative = BuildToolUtils.OpenProjectFilePanel("Select file to copy on build");
+                            //If a valid file is selected, add it
+                            if (!string.IsNullOrEmpty(relative) && !prop.Children().Any(p => p.Contains(BuildItem.PATH_NAME, relative)))
                             {
-                                using (new EditorGUILayout.HorizontalScope())
-                                {
-                                    //Delete entry button
-                                    GUI.backgroundColor = BuildToolUtils.Red;
-                                    if (GUILayout.Button(deleteEntry, deleteButtonStyle, GUILayout.Width(20f)))
-                                    {
-                                        //Store index to delete it later (else it breaks the enumeration
-                                        toDelete = index;
-                                    }
-
-                                    GUI.backgroundColor = Color.white;
-                                    //Entry to copy label
-                                    toCopy.NextVisible(true); //Path
-                                    string path = toCopy.stringValue;
-                                    //Make sure the path isn't too long to be displayed
-                                    if (path.Length > 40)
-                                    {
-                                        path = path.Substring(0, 37) + "...";
-                                    }
-
-                                    EditorGUILayout.LabelField(new GUIContent(path, toCopy.stringValue));
-                                    toCopy.NextVisible(true); //Location
-                                    toCopy.intValue = (int)(BuildItem.CopyLocation)EditorGUILayout.EnumPopup((BuildItem.CopyLocation)toCopy.intValue, GUILayout.Width(100f));
-                                }
-                                index++;
-                            }
-
-                            //If an entry has been marked to delete, delete it now
-                            if (toDelete != -1)
-                            {
-                                prop.DeleteArrayElementAtIndex(toDelete);
+                                //Increment size and set at the end
+                                prop.arraySize++;
+                                SerializedProperty item = prop.GetArrayElementAtIndex(prop.arraySize - 1);
+                                item.NextVisible(true); //Path
+                                item.stringValue = relative;
                             }
                         }
 
-                        GUILayout.Space(5f);
-                        using (new EditorGUILayout.HorizontalScope())
+                        GUILayout.Space(10f);
+                        if (GUILayout.Button("Add folder...", EditorStyles.miniButton))
                         {
-                            GUILayout.Space(4f);
-                            //Add file browser
-                            if (GUILayout.Button("Add file...", EditorStyles.miniButton))
+                            //Get relative path
+                            string relative = BuildToolUtils.OpenProjectFolderPanel("Select folder to copy on build");
+                            //If a valid folder is selected, add it
+                            if (!string.IsNullOrEmpty(relative) && !prop.Children().Any(p => p.Contains(BuildItem.PATH_NAME, relative)))
                             {
-                                //Get relative path
-                                string relative = BuildToolUtils.OpenProjectFilePanel("Select file to copy on build");
-                                //If a valid file is selected, add it
-                                if (!string.IsNullOrEmpty(relative) && !prop.Children().Any(p => p.Contains(BuildItem.PATH_NAME, relative)))
-                                {
-                                    //Increment size and set at the end
-                                    prop.arraySize++;
-                                    SerializedProperty item = prop.GetArrayElementAtIndex(prop.arraySize - 1);
-                                    item.NextVisible(true); //Path
-                                    item.stringValue = relative;
-                                }
+                                //Increment size and set at the end
+                                prop.arraySize++;
+                                SerializedProperty item = prop.GetArrayElementAtIndex(prop.arraySize - 1);
+                                item.NextVisible(true); //Path
+                                item.stringValue = relative;
                             }
-
-                            GUILayout.Space(10f);
-                            if (GUILayout.Button("Add folder...", EditorStyles.miniButton))
-                            {
-                                //Get relative path
-                                string relative = BuildToolUtils.OpenProjectFolderPanel("Select folder to copy on build");
-                                //If a valid folder is selected, add it
-                                if (!string.IsNullOrEmpty(relative) && !prop.Children().Any(p => p.Contains(BuildItem.PATH_NAME, relative)))
-                                {
-                                    //Increment size and set at the end
-                                    prop.arraySize++;
-                                    SerializedProperty item = prop.GetArrayElementAtIndex(prop.arraySize - 1);
-                                    item.NextVisible(true); //Path
-                                    item.stringValue = relative;
-                                }
-                            }
-
-                            GUILayout.Space(12f);
                         }
 
-                        GUILayout.Space(15f);
+                        GUILayout.Space(12f);
                     }
+
+                    GUILayout.Space(15f);
                 }
             }
         }

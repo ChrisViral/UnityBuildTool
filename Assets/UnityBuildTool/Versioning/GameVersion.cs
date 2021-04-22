@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using UnityEngine;
 
-namespace UnityBuildTool.Versioning
+namespace Versioning
 {
     /// <summary>
     /// Game version info class

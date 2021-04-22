@@ -18,24 +18,46 @@ namespace UnityBuildTool
         [CustomEditor(typeof(BuildToolSettings))]
         private class BuildToolSettingsEditor : Editor
         {
+            #region Fields
+            private SerializedProperty buildRepository;
+            private SerializedProperty useWebService;
+            private SerializedProperty versionURL;
+            private SerializedProperty developmentBuild;
+            private SerializedProperty publishRelease;
+            private SerializedProperty outputFolder;
+            private SerializedProperty targetFlags;
+            private SerializedProperty copyOnBuild;
+            #endregion
+
             #region Methods
+            private void OnEnable()
+            {
+                this.buildRepository  = this.serializedObject.FindProperty(BUILD_REPOSITORY_NAME);
+                this.useWebService    = this.serializedObject.FindProperty(USE_WEB_SERVICE_NAME);
+                this.versionURL       = this.serializedObject.FindProperty(VERSION_URL_NAME);
+                this.developmentBuild = this.serializedObject.FindProperty(DEVELOPMENT_BUILD_NAME);
+                this.publishRelease   = this.serializedObject.FindProperty(PUBLISH_RELEASE_NAME);
+                this.outputFolder     = this.serializedObject.FindProperty(OUTPUT_FOLDER_NAME);
+                this.targetFlags      = this.serializedObject.FindProperty(TARGET_FLAGS_NAME);
+                this.copyOnBuild      = this.serializedObject.FindProperty(COPY_ON_BUILD_NAME);
+            }
+
             /// <summary>
             /// Generate the inspector GUI
             /// </summary>
             public override void OnInspectorGUI()
             {
                 //Normal property fields for everyone
-                EditorGUILayout.PropertyField(this.serializedObject.FindProperty(BUILD_REPOSITORY_NAME));
-                EditorGUILayout.PropertyField(this.serializedObject.FindProperty(USE_WEB_SERVICE_NAME));
-                EditorGUILayout.PropertyField(this.serializedObject.FindProperty(VERSION_URL_NAME));
-                EditorGUILayout.PropertyField(this.serializedObject.FindProperty(DEVELOPMENT_BUILD_NAME));
-                EditorGUILayout.PropertyField(this.serializedObject.FindProperty(PUBLISH_RELEASE_NAME));
-                EditorGUILayout.PropertyField(this.serializedObject.FindProperty(OUTPUT_FOLDER_NAME));
+                EditorGUILayout.PropertyField(this.buildRepository);
+                EditorGUILayout.PropertyField(this.useWebService);
+                EditorGUILayout.PropertyField(this.versionURL);
+                EditorGUILayout.PropertyField(this.developmentBuild);
+                EditorGUILayout.PropertyField(this.publishRelease);
+                EditorGUILayout.PropertyField(this.outputFolder);
                 //Except for the flags on
-                SerializedProperty flags = this.serializedObject.FindProperty(TARGET_FLAGS_NAME);
-                flags.intValue = (int)(BuildTargetFlags)EditorGUILayout.EnumFlagsField("Target Flags", (BuildTargetFlags)flags.intValue);
+                this.targetFlags.intValue = (int)(BuildTargetFlags)EditorGUILayout.EnumFlagsField("Target Flags", (BuildTargetFlags)this.targetFlags.intValue);
                 //And back to normal
-                EditorGUILayout.PropertyField(this.serializedObject.FindProperty(COPY_ON_BUILD_NAME), true);
+                EditorGUILayout.PropertyField(this.copyOnBuild, true);
 
                 if (this.serializedObject.hasModifiedProperties)
                 {
@@ -48,7 +70,7 @@ namespace UnityBuildTool
 
         #region Constants
         /// <summary>Settings file name</summary>
-        private const string filePath = "Assets/BuildTool/Editor/BuildToolSettings.asset";
+        private const string filePath = "Assets/UnityBuildTool/Editor/BuildToolSettings.asset";
         /// <summary>Name of the BuildRepository SerializedProperty</summary>
         public const string BUILD_REPOSITORY_NAME  = nameof(buildRepository);
         /// <summary>Name of the UseWebService SerializedProperty</summary>
@@ -138,7 +160,6 @@ namespace UnityBuildTool
             if (!settings)
             {
                 settings = CreateInstance<BuildToolSettings>();
-                Directory.GetParent(filePath).Create();
                 AssetDatabase.CreateAsset(settings, filePath);
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();

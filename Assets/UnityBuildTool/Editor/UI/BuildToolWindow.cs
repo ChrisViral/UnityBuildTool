@@ -51,8 +51,8 @@ namespace UnityBuildTool.UI
         {
             fontStyle = FontStyle.Bold,
             fontSize = 16,
-            normal = { textColor = BuildToolUtils.Green },
-            active = { textColor = BuildToolUtils.Green }
+            normal = { textColor = StylesUtils.Green },
+            active = { textColor = StylesUtils.Green }
         });
         #endregion
 
@@ -469,7 +469,7 @@ namespace UnityBuildTool.UI
             {
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    using (new EditorGUILayout.VerticalScope())
+                    using (new EditorGUILayout.VerticalScope(GUILayout.Width(450f)))
                     {
                         EditorGUILayout.Space();
                         //API URL selection
@@ -491,12 +491,16 @@ namespace UnityBuildTool.UI
                             }
                             GUILayout.FlexibleSpace();
                         }
-                        GUILayout.Space(10f);
+                        EditorGUILayout.Space(10f);
                     }
 
-                    //Release creator
-                    this.buildHandler.ReleaseCreator();
-                    GUILayout.Space(20f);
+                    using (new EditorGUILayout.VerticalScope())
+                    {
+                        //Release creator
+                        this.buildHandler.ReleaseCreator();
+                    }
+
+                    GUILayout.FlexibleSpace();
                 }
             }
 
