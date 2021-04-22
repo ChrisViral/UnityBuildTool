@@ -77,11 +77,14 @@ namespace UnityBuildTool.UI
         private static readonly GUIContent buildButton          = new GUIContent("BUILD",                 "Build the game for the selected targets and release to GitHub");
         private static readonly GUIContent copyLabel            = new GUIContent("Files/Folders to copy", "Files and folders that should be copied over when building the game");
         private static readonly GUIContent deleteEntry          = new GUIContent("X",                     "Delete this entry to copy on build");
+        private static readonly GUIContent loadedLabel          = new GUIContent("Waiting for valid BuildVersion from web API...");
+        private static readonly GUIContent notLoadedLabel       = new GUIContent("Waiting for repository data to be loaded...");
         #endregion
 
         #region Fields
         //Objects
         private readonly BuildToolWindow window;
+        private readonly SerializedProperty useWebService, versionURL, publishRelease, developmentBuild, outputFolder, targetFlags, copyOnBuild;
 
         //GUI Fields
         private readonly AnimBool urlUsed = new AnimBool(false);
@@ -112,6 +115,15 @@ namespace UnityBuildTool.UI
             this.apiURL = this.window.Settings.VersionURL ?? string.Empty;
             this.urlUsed.value = window.Settings.UseWebService;
             this.urlUsed.valueChanged.AddListener(window.Repaint);
+
+            //Settings serialized properties
+            this.useWebService = this.window.SerializedSettings.FindProperty(BuildToolSettings.USE_WEB_SERVICE_NAME);
+            this.versionURL = this.window.SerializedSettings.FindProperty(BuildToolSettings.VERSION_URL_NAME);
+            this.publishRelease = this.window.SerializedSettings.FindProperty(BuildToolSettings.PUBLISH_RELEASE_NAME);
+            this.developmentBuild = this.window.SerializedSettings.FindProperty(BuildToolSettings.DEVELOPMENT_BUILD_NAME);
+            this.outputFolder = this.window.SerializedSettings.FindProperty(BuildToolSettings.OUTPUT_FOLDER_NAME);
+            this.targetFlags = this.window.SerializedSettings.FindProperty(BuildToolSettings.TARGET_FLAGS_NAME);
+            this.copyOnBuild = this.window.SerializedSettings.FindProperty(BuildToolSettings.COPY_ON_BUILD_NAME);
 
             if (this.window.Settings.UseWebService)
             {
@@ -158,10 +170,10 @@ namespace UnityBuildTool.UI
         {
             //Fade group
             this.urlUsed.target = EditorGUILayout.ToggleLeft(useURL, this.urlUsed.target);
-            this.window.SerializedSettings.FindProperty(BuildToolSettings.USE_WEB_SERVICE_NAME).boolValue = this.urlUsed.target;
+            this.useWebService.boolValue = this.urlUsed.target;
             if (!string.IsNullOrEmpty(this.apiURL) && !this.urlUsed.target)
             {
-                this.window.SerializedSettings.FindProperty(BuildToolSettings.VERSION_URL_NAME).stringValue = string.Empty;
+                this.versionURL.stringValue = string.Empty;
                 this.apiURL = string.Empty;
             }
 
@@ -184,7 +196,7 @@ namespace UnityBuildTool.UI
                         if (GUILayout.Button(connect, GUILayout.Width(331f)))
                         {
                             //Set on the serialized property
-                            this.window.SerializedSettings.FindProperty(BuildToolSettings.VERSION_URL_NAME).stringValue = this.apiURL;
+                            this.versionURL.stringValue = this.apiURL;
                             //Try to get the build
                             this.Log("Testing connection to " + this.apiURL);
                             this.window.GetBuild();
@@ -208,7 +220,7 @@ namespace UnityBuildTool.UI
                 //Set the local branches to null to make sure the array is reinitialized when they have been fetched/repo has been changed
                 this.branches = null;
                 //Display info label
-                GUIContent label = new GUIContent(branchesNotLoaded ? "Waiting for repository data to be loaded..." : "Waiting for valid BuildVersion from web API...");
+                GUIContent label = branchesNotLoaded ? notLoadedLabel : loadedLabel;
                 float width = EditorStyles.boldLabel.CalcSize(label).x;
                 EditorGUILayout.LabelField(label, EditorStyles.boldLabel, GUILayout.Width(width));
                 //Repaint to make sure the change appears as soon as possible
@@ -260,11 +272,9 @@ namespace UnityBuildTool.UI
                     this.draft = EditorGUILayout.ToggleLeft(draftToggle, this.draft);
                     GUI.enabled = this.window.UIEnabled;
                     //Publish toggle
-                    SerializedProperty prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.PUBLISH_RELEASE_NAME);
-                    prop.boolValue = EditorGUILayout.ToggleLeft(publishToggle, prop.boolValue);
+                    this.publishRelease.boolValue = EditorGUILayout.ToggleLeft(publishToggle, this.publishRelease.boolValue);
                     //Dev build toggle
-                    prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.DEVELOPMENT_BUILD_NAME);
-                    prop.boolValue = EditorGUILayout.ToggleLeft(devBuildToggle, prop.boolValue);
+                    this.developmentBuild.boolValue = EditorGUILayout.ToggleLeft(devBuildToggle, this.developmentBuild.boolValue);
                     //Version bump settings
                     using (HorizontalScope.Enter())
                     {
@@ -277,11 +287,9 @@ namespace UnityBuildTool.UI
 
                     using (HorizontalScope.Enter())
                     {
-                        //Output folder property
-                        prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.OUTPUT_FOLDER_NAME);
                         //Output folder field
                         EditorGUIUtility.labelWidth = 110f;
-                        EditorGUILayout.PropertyField(prop, outputDirectoryLabel, GUILayout.Width(300f));
+                        EditorGUILayout.PropertyField(this.outputFolder, outputDirectoryLabel, GUILayout.Width(300f));
                         //Browse button
                         if (GUILayout.Button("Browse...", EditorStyles.miniButton, GUILayout.Width(70f)))
                         {
@@ -290,22 +298,20 @@ namespace UnityBuildTool.UI
                             //If the path has changed, apply it
                             if (this.window.Settings.OutputFolder != relative)
                             {
-                                prop.stringValue = relative;
+                                this.outputFolder.stringValue = relative;
                             }
                         }
                     }
 
-                    //Target flags property
-                    prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.TARGET_FLAGS_NAME);
                     //Target flags selection
-                    prop.intValue = (int)(BuildTargetFlags)EditorGUILayout.EnumFlagsField(buildTargetsLabel, (BuildTargetFlags)prop.intValue, GUILayout.Width(375f));
+                    this.targetFlags.intValue = (int)(BuildTargetFlags)EditorGUILayout.EnumFlagsField(buildTargetsLabel, (BuildTargetFlags)this.targetFlags.intValue, GUILayout.Width(375f));
                     EditorGUIUtility.labelWidth = 0f;
                     EditorGUILayout.Space(30f);
                     //Build button
                     GUI.backgroundColor = StylesUtils.Green;
                     if (GUILayout.Button(buildButton, StylesUtils.BuildButtonStyle, GUILayout.Height(60f), GUILayout.Width(375f)))
                     {
-                        if ((BuildTargetFlags)prop.intValue == BuildTargetFlags.None)
+                        if ((BuildTargetFlags)this.targetFlags.intValue == BuildTargetFlags.None)
                         {
                             EditorUtility.DisplayDialog("Error", "Please select at least one target to build for", "Okay");
                         }
@@ -316,7 +322,7 @@ namespace UnityBuildTool.UI
                         else
                         {
                             //Confirm build
-                            string targets = string.Join("\n", BuildToolUtils.GetTargets((BuildTargetFlags)prop.intValue));
+                            string targets = string.Join("\n", BuildToolUtils.GetTargets((BuildTargetFlags)this.targetFlags.intValue));
                             if (EditorUtility.DisplayDialog("Building Game", "Building for the following targets:\n" + targets, "Build", "Cancel"))
                             {
                                 this.window.StartBuild();
@@ -331,13 +337,12 @@ namespace UnityBuildTool.UI
                 {
                     //Copy files and folders panel header
                     EditorGUILayout.LabelField(copyLabel, StylesUtils.CenteredLabelStyle);
-                    SerializedProperty prop = this.window.SerializedSettings.FindProperty(BuildToolSettings.COPY_ON_BUILD_NAME);
                     //List scrollview
                     using (ScrollViewScope.Enter(ref this.scroll, false, false, GUI.skin.horizontalScrollbar, GUI.skin.verticalScrollbar, EditorStyles.helpBox, GUILayout.Height(200f), GUILayout.MinWidth(400f)))
                     {
                         int index = 0, toDelete = -1;
                         //List all folders and files to copy
-                        foreach (SerializedProperty toCopy in prop)
+                        foreach (SerializedProperty toCopy in this.copyOnBuild)
                         {
                             using (HorizontalScope.Enter())
                             {
@@ -370,7 +375,7 @@ namespace UnityBuildTool.UI
                         //If an entry has been marked to delete, delete it now
                         if (toDelete != -1)
                         {
-                            prop.DeleteArrayElementAtIndex(toDelete);
+                            this.copyOnBuild.DeleteArrayElementAtIndex(toDelete);
                         }
                     }
 
@@ -383,11 +388,11 @@ namespace UnityBuildTool.UI
                             //Get relative path
                             string relative = BuildToolUtils.OpenProjectFilePanel("Select file to copy on build");
                             //If a valid file is selected, add it
-                            if (!string.IsNullOrEmpty(relative) && !prop.Children().Any(p => p.Contains(BuildItem.PATH_NAME, relative)))
+                            if (!string.IsNullOrEmpty(relative) && !this.copyOnBuild.Children().Any(p => p.Contains(BuildItem.PATH_NAME, relative)))
                             {
                                 //Increment size and set at the end
-                                prop.arraySize++;
-                                SerializedProperty item = prop.GetArrayElementAtIndex(prop.arraySize - 1);
+                                this.copyOnBuild.arraySize++;
+                                SerializedProperty item = this.copyOnBuild.GetArrayElementAtIndex(this.copyOnBuild.arraySize - 1);
                                 item.NextVisible(true); //Path
                                 item.stringValue = relative;
                             }
@@ -399,11 +404,11 @@ namespace UnityBuildTool.UI
                             //Get relative path
                             string relative = BuildToolUtils.OpenProjectFolderPanel("Select folder to copy on build");
                             //If a valid folder is selected, add it
-                            if (!string.IsNullOrEmpty(relative) && !prop.Children().Any(p => p.Contains(BuildItem.PATH_NAME, relative)))
+                            if (!string.IsNullOrEmpty(relative) && !this.copyOnBuild.Children().Any(p => p.Contains(BuildItem.PATH_NAME, relative)))
                             {
                                 //Increment size and set at the end
-                                prop.arraySize++;
-                                SerializedProperty item = prop.GetArrayElementAtIndex(prop.arraySize - 1);
+                                this.copyOnBuild.arraySize++;
+                                SerializedProperty item = this.copyOnBuild.GetArrayElementAtIndex(this.copyOnBuild.arraySize - 1);
                                 item.NextVisible(true); //Path
                                 item.stringValue = relative;
                             }
