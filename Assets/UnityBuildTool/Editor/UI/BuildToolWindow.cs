@@ -27,10 +27,14 @@ namespace UnityBuildTool.UI
 
         #region Constants
         /// <summary>Window title</summary>
-        private const string windowTitle = "Build Tool";
+        private const string WINDOW_TITLE = "Build Tool";
 
         //GUI content
         private static readonly GUIContent refreshButton = new GUIContent("Refresh", "Refresh the connection to GitHub and get any changes");
+
+        //Options
+        private static readonly GUILayoutOption[] selectorOptions      = { GUILayout.Width(450f) };
+        private static readonly GUILayoutOption[] refreshButtonOptions = { GUILayout.Width(200f), GUILayout.Height(40f) };
         #endregion
 
         #region Static Properties
@@ -122,7 +126,7 @@ namespace UnityBuildTool.UI
             if (!Window)
             {
                 //Open the window docked to the main panel
-                GetWindow<BuildToolWindow>(windowTitle, true, typeof(SceneView));
+                GetWindow<BuildToolWindow>(WINDOW_TITLE, true, typeof(SceneView));
             }
         }
         #endregion
@@ -195,6 +199,11 @@ namespace UnityBuildTool.UI
             Repaint();
             this.UIEnabled = true;
         }
+
+        /// <summary>
+        /// Resets the current API Status to not connected
+        /// </summary>
+        public void ClearBuild() => this.APIStatus = BuildAPIStatus.NOT_CONNECTED;
 
         /// <summary>
         /// Fetches the BuildVersion from the text file
@@ -380,7 +389,10 @@ namespace UnityBuildTool.UI
             }
             else if (task.IsFaulted)
             {
-                if (task.Exception != null) { this.LogException(task.Exception); }
+                if (task.Exception != null)
+                {
+                    this.LogException(task.Exception);
+                }
                 this.Log("Build encountered a problem and shutdown");
                 this.popupTitle = "Build Failed";
                 this.popupContent = "The build has failed\nCheck log for more info";
@@ -411,7 +423,10 @@ namespace UnityBuildTool.UI
         private void Awake()
         {
             //If a window already exists, do not open a new one
-            if (Window) Destroy(this);
+            if (Window)
+            {
+                Destroy(this);
+            }
             else
             {
                 //Set the window as this and init the object
@@ -424,7 +439,10 @@ namespace UnityBuildTool.UI
         private void OnGUI()
         {
             //Check if the object has just been deserialized and needs a reconnection
-            if (this.SerializedSettings is null) Init();
+            if (this.SerializedSettings is null)
+            {
+                Init();
+            }
 
             //UI state
             GUI.enabled = this.UIEnabled;
@@ -458,7 +476,7 @@ namespace UnityBuildTool.UI
             {
                 using (HorizontalScope.Enter())
                 {
-                    using (VerticalScope.Enter(GUILayout.Width(450f)))
+                    using (VerticalScope.Enter(selectorOptions))
                     {
                         EditorGUILayout.Space();
                         //API URL selection
@@ -473,7 +491,7 @@ namespace UnityBuildTool.UI
                         using (HorizontalScope.Enter())
                         {
                             GUILayout.FlexibleSpace();
-                            if (GUILayout.Button(refreshButton, StylesUtils.RefreshButtonStyle, GUILayout.Width(200f), GUILayout.Height(40f)))
+                            if (GUILayout.Button(refreshButton, StylesUtils.RefreshButtonStyle, refreshButtonOptions))
                             {
                                 RefreshConnection();
                                 return;
@@ -497,6 +515,7 @@ namespace UnityBuildTool.UI
             if (this.SerializedSettings.hasModifiedProperties)
             {
                 this.SerializedSettings.ApplyModifiedPropertiesWithoutUndo();
+                EditorUtility.SetDirty(this.SerializedSettings.targetObject);
             }
 
             //Restore UI state

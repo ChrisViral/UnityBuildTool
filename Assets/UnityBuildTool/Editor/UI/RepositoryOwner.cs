@@ -14,6 +14,10 @@ namespace UnityBuildTool.UI
     /// </summary>
     public class RepositoryOwner : IComparable<RepositoryOwner>
     {
+        #region Constants
+        private static readonly GUILayoutOption[] scopeOptions = { GUILayout.Width(425f) };
+        #endregion
+
         #region Fields
         //GUI fields
         private readonly GUIContent foldoutTitle;
@@ -91,7 +95,7 @@ namespace UnityBuildTool.UI
         public bool Select()
         {
             //Foldout group
-            using (VerticalScope.Enter(GUILayout.Width(425f)))
+            using (VerticalScope.Enter(scopeOptions))
             using (FoldoutHeaderScope.Enter(this.fadeBool, this.foldoutTitle))
             using (FadeGroupScope.Enter(this.fadeBool.faded, out bool visible))
             {

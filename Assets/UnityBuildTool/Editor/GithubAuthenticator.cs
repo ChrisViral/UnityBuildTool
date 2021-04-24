@@ -281,6 +281,7 @@ namespace UnityBuildTool
                 //Store user code and verification URL
                 this.UserCode = response.userCode;
                 this.VerificationURL = response.verificationUrl;
+                this.window.UIEnabled = true;
 
                 //Start verification process
                 this.Status = ConnectionStatus.AWAITING_VERIFICATION;
@@ -314,6 +315,7 @@ namespace UnityBuildTool
             }
             catch (Exception e)
             {
+                this.window.UIEnabled = true;
                 this.LogException(e);
                 this.Status = ConnectionStatus.BAD_TOKEN;
 

@@ -56,28 +56,28 @@
     <Analyzer Include="C:\Program Files (x86)\Microsoft Visual Studio Tools for Unity\16.0\Analyzers\Microsoft.Unity.Analyzers.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\UnityBuildTool\Editor\DeviceFlow\OAuthDeviceFlowTokenResponse.cs" />
+    <Compile Include="Assets\UnityBuildTool\Editor\Builder.cs" />
+    <Compile Include="Assets\UnityBuildTool\Editor\UI\BuildHandler.cs" />
+    <Compile Include="Assets\UnityBuildTool\Editor\DeviceFlow\OAuthClientExtensions.cs" />
     <Compile Include="Assets\UnityBuildTool\Editor\UI\BuildToolWindow.cs" />
     <Compile Include="Assets\UnityBuildTool\Editor\UI\ConnectionHandler.cs" />
-    <Compile Include="Assets\UnityBuildTool\Editor\GithubAuthenticator.cs" />
     <Compile Include="Assets\UnityBuildTool\Editor\DeviceFlow\OAuthDeviceFlowResponse.cs" />
-    <Compile Include="Assets\UnityBuildTool\Editor\Builder.cs" />
-    <Compile Include="Assets\UnityBuildTool\Editor\UI\RepositoryInfo.cs" />
-    <Compile Include="Assets\UnityBuildTool\Editor\DeviceFlow\OAuthClientExtensions.cs" />
-    <Compile Include="Assets\UnityBuildTool\Editor\DeviceFlow\OAuthDeviceFlowTokenResponse.cs" />
-    <Compile Include="Assets\UnityBuildTool\Editor\DeviceFlow\OAuthDeviceFlowRequest.cs" />
     <Compile Include="Assets\UnityBuildTool\Editor\BuildVersion.cs" />
+    <Compile Include="Assets\UnityBuildTool\Editor\BuildItem.cs" />
+    <Compile Include="Assets\UnityBuildTool\Editor\UI\RepositorySelector.cs" />
+    <Compile Include="Assets\UnityBuildTool\Editor\UI\StylesUtils.cs" />
+    <Compile Include="Assets\UnityBuildTool\Editor\UI\ScopeProvider.cs" />
+    <Compile Include="Assets\UnityBuildTool\Editor\DeviceFlow\OAuthDeviceFlowRequest.cs" />
+    <Compile Include="Assets\UnityBuildTool\Editor\BuildVersionWebClient.cs" />
     <Compile Include="Assets\UnityBuildTool\Editor\BuildToolUtils.cs" />
     <Compile Include="Assets\UnityBuildTool\Editor\DeviceFlow\OAuthDeviceFlowTokenRequest.cs" />
     <Compile Include="Assets\UnityBuildTool\Editor\Extensions\Extensions.cs" />
     <Compile Include="Assets\UnityBuildTool\Editor\BuildToolClient.cs" />
-    <Compile Include="Assets\UnityBuildTool\Editor\BuildItem.cs" />
-    <Compile Include="Assets\UnityBuildTool\Editor\BuildVersionWebClient.cs" />
+    <Compile Include="Assets\UnityBuildTool\Editor\UI\RepositoryInfo.cs" />
+    <Compile Include="Assets\UnityBuildTool\Editor\GithubAuthenticator.cs" />
     <Compile Include="Assets\UnityBuildTool\Editor\BuildToolSettings.cs" />
     <Compile Include="Assets\UnityBuildTool\Editor\UI\RepositoryOwner.cs" />
-    <Compile Include="Assets\UnityBuildTool\Editor\UI\BuildHandler.cs" />
-    <Compile Include="Assets\UnityBuildTool\Editor\UI\RepositorySelector.cs" />
-    <Compile Include="Assets\UnityBuildTool\Editor\UI\StylesUtils.cs" />
-    <Compile Include="Assets\UnityBuildTool\Editor\UI\ScopeProvider.cs" />
   </ItemGroup>
   <ItemGroup>
      <None Include="Assets\UnityBuildTool\Editor\Plugins\Octokit.dll" />
@@ -321,11 +321,11 @@
     <Reference Include="SyntaxTree.VisualStudio.Unity.Bridge">
       <HintPath>C:\Program Files (x86)\Microsoft Visual Studio Tools for Unity\16.0\Editor\SyntaxTree.VisualStudio.Unity.Bridge.dll</HintPath>
     </Reference>
-    <Reference Include="DotNetZip">
-      <HintPath>Assets\UnityBuildTool\Editor\Plugins\DotNetZip.dll</HintPath>
-    </Reference>
     <Reference Include="Octokit">
       <HintPath>Assets\UnityBuildTool\Editor\Plugins\Octokit.dll</HintPath>
+    </Reference>
+    <Reference Include="DotNetZip">
+      <HintPath>Assets\UnityBuildTool\Editor\Plugins\DotNetZip.dll</HintPath>
     </Reference>
     <Reference Include="System.Security">
       <HintPath>Assets\UnityBuildTool\Editor\Plugins\System.Security.dll</HintPath>

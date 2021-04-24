@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Octokit;
 using UnityBuildTool.Extensions;
 using UnityEditor;
@@ -79,28 +80,89 @@ namespace UnityBuildTool.UI
         private static readonly GUIContent deleteEntry          = new GUIContent("X",                     "Delete this entry to copy on build");
         private static readonly GUIContent loadedLabel          = new GUIContent("Waiting for valid BuildVersion from web API...");
         private static readonly GUIContent notLoadedLabel       = new GUIContent("Waiting for repository data to be loaded...");
+
+        //Option arrays
+        private static readonly GUILayoutOption[] selectorOptions         = { GUILayout.Width(425f) };
+        private static readonly GUILayoutOption[] labelOptions            = { GUILayout.Width(109f) };
+        private static readonly GUILayoutOption[] headerOptions           = { GUILayout.Width(150f), GUILayout.Height(30f) };
+        private static readonly GUILayoutOption[] titleOptions            = { GUILayout.Height(25f) };
+        private static readonly GUILayoutOption[] branchSelectorOptions   = { GUILayout.Width(175f) };
+        private static readonly GUILayoutOption[] descriptionLabelOptions = { GUILayout.Width(100f), GUILayout.Height(30f) };
+        private static readonly GUILayoutOption[] descriptionOptions      = { GUILayout.ExpandHeight(true), GUILayout.ExpandWidth(true) };
+        private static readonly GUILayoutOption[] buildVersionOptions     = { GUILayout.Width(188f) };
+        private static readonly GUILayoutOption[] sideButtonOptions       = { GUILayout.Width(70f) };
+        private static readonly GUILayoutOption[] outputFolderOptions     = { GUILayout.Width(300f) };
+        private static readonly GUILayoutOption[] targetsOptions          = { GUILayout.Width(375f) };
+        private static readonly GUILayoutOption[] buildButtonOptions      = { GUILayout.Width(375f), GUILayout.Height(60f) };
+        private static readonly GUILayoutOption[] filesScrollOptions      = { GUILayout.Width(400f), GUILayout.Height(200f) };
+        private static readonly GUILayoutOption[] deleteButtonOptions     = { GUILayout.Width(20f) };
+        private static readonly GUILayoutOption[] copyPopupOptions        = { GUILayout.Width(100f) };
+        private static readonly GUILayoutOption[] addButtonOptions        = { GUILayout.Width(190f) };
+
         #endregion
 
         #region Fields
         //Objects
         private readonly BuildToolWindow window;
         private readonly SerializedProperty useWebService, versionURL, publishRelease, developmentBuild, outputFolder, targetFlags, copyOnBuild;
+        private readonly GUILayoutOption[] loadedLabelOptions, notLoadedLabelOptions;
 
         //GUI Fields
         private readonly AnimBool urlUsed = new AnimBool(false);
-        private string title, description, apiURL;
+        private string title, description, apiURL, currentCommitMessage, bumpString;
         private string[] branches;
-        private int selectedBranch;
-        private VersionBump bump;
         private bool prerelease, draft;
         private Vector2 scroll;
         #endregion
 
         #region Properties
+        private int selectedBranch;
+        /// <summary>
+        /// Index of the currently selected branch
+        /// </summary>
+        private int SelectedBranch
+        {
+            get => this.selectedBranch;
+            set
+            {
+                if (this.selectedBranch != value)
+                {
+                    this.selectedBranch = value;
+                    this.CurrentCommit = this.window.Authenticator.CurrentBranches[this.selectedBranch].commit;
+                }
+            }
+        }
+
+        private GitHubCommit currentCommit;
         /// <summary>
         /// The last commit of the currently selected branch
         /// </summary>
-        private GitHubCommit CurrentCommit => this.window.Authenticator.CurrentBranches[this.selectedBranch].commit;
+        private GitHubCommit CurrentCommit
+        {
+            get => this.currentCommit;
+            set
+            {
+                if (this.currentCommit != value)
+                {
+                    this.currentCommit = value;
+                    this.currentCommitMessage = $"[{this.CurrentCommit.Sha.Substring(0, 7)}] {this.CurrentCommit.Commit.Message}";
+                }
+            }
+        }
+
+        private VersionBump bump;
+        public VersionBump Bump
+        {
+            get => this.bump;
+            set
+            {
+                if (this.bump != value)
+                {
+                    this.bump = value;
+                    this.bumpString = this.window.BuildVersion.GetBumpedVersionString(value);
+                }
+            }
+        }
         #endregion
 
         #region Constructors
@@ -117,13 +179,17 @@ namespace UnityBuildTool.UI
             this.urlUsed.valueChanged.AddListener(window.Repaint);
 
             //Settings serialized properties
-            this.useWebService = this.window.SerializedSettings.FindProperty(BuildToolSettings.USE_WEB_SERVICE_NAME);
-            this.versionURL = this.window.SerializedSettings.FindProperty(BuildToolSettings.VERSION_URL_NAME);
-            this.publishRelease = this.window.SerializedSettings.FindProperty(BuildToolSettings.PUBLISH_RELEASE_NAME);
+            this.useWebService    = this.window.SerializedSettings.FindProperty(BuildToolSettings.USE_WEB_SERVICE_NAME);
+            this.versionURL       = this.window.SerializedSettings.FindProperty(BuildToolSettings.VERSION_URL_NAME);
+            this.publishRelease   = this.window.SerializedSettings.FindProperty(BuildToolSettings.PUBLISH_RELEASE_NAME);
             this.developmentBuild = this.window.SerializedSettings.FindProperty(BuildToolSettings.DEVELOPMENT_BUILD_NAME);
-            this.outputFolder = this.window.SerializedSettings.FindProperty(BuildToolSettings.OUTPUT_FOLDER_NAME);
-            this.targetFlags = this.window.SerializedSettings.FindProperty(BuildToolSettings.TARGET_FLAGS_NAME);
-            this.copyOnBuild = this.window.SerializedSettings.FindProperty(BuildToolSettings.COPY_ON_BUILD_NAME);
+            this.outputFolder     = this.window.SerializedSettings.FindProperty(BuildToolSettings.OUTPUT_FOLDER_NAME);
+            this.targetFlags      = this.window.SerializedSettings.FindProperty(BuildToolSettings.TARGET_FLAGS_NAME);
+            this.copyOnBuild      = this.window.SerializedSettings.FindProperty(BuildToolSettings.COPY_ON_BUILD_NAME);
+
+            //Label sizes
+            this.loadedLabelOptions    = new[] { GUILayout.Width(EditorStyles.boldLabel.CalcSize(loadedLabel).x) };
+            this.notLoadedLabelOptions = new[] { GUILayout.Width(EditorStyles.boldLabel.CalcSize(notLoadedLabel).x) };
 
             if (this.window.Settings.UseWebService)
             {
@@ -149,6 +215,7 @@ namespace UnityBuildTool.UI
             {
                 //Get branch names
                 this.branches = this.window.Authenticator.CurrentBranches.Select(t => t.branch.Name).ToArray();
+                this.CurrentCommit = this.window.Authenticator.CurrentBranches[this.SelectedBranch].commit;
             }
         }
 
@@ -158,7 +225,7 @@ namespace UnityBuildTool.UI
         public void Reset()
         {
             this.title = this.description = string.Empty;
-            this.selectedBranch = 0;
+            this.SelectedBranch = 0;
             this.bump = VersionBump.Revision;
             this.prerelease = this.draft = false;
         }
@@ -168,42 +235,58 @@ namespace UnityBuildTool.UI
         /// </summary>
         public void URLSelector()
         {
-            //Fade group
-            this.urlUsed.target = EditorGUILayout.ToggleLeft(useURL, this.urlUsed.target);
-            this.useWebService.boolValue = this.urlUsed.target;
-            if (!string.IsNullOrEmpty(this.apiURL) && !this.urlUsed.target)
+            using (HorizontalScope.Enter(selectorOptions))
             {
-                this.versionURL.stringValue = string.Empty;
-                this.apiURL = string.Empty;
-            }
-
-            using (FadeGroupScope.Enter(this.urlUsed.faded, out bool visible))
-            {
-                if (visible)
+                using (VerticalScope.Enter())
                 {
-                    //Get URL
-                    EditorGUI.indentLevel++;
-                    EditorGUIUtility.labelWidth = 95f;
-                    this.apiURL = EditorGUILayout.TextField(url, this.apiURL, GUILayout.Width(426f));
-                    EditorGUIUtility.labelWidth = 0f;
-                    using (HorizontalScope.Enter())
+                    //Fade group
+                    this.urlUsed.target = EditorGUILayout.ToggleLeft(useURL, this.urlUsed.target);
+                    this.useWebService.boolValue = this.urlUsed.target;
+                    if (string.IsNullOrEmpty(this.apiURL))
                     {
-                        //Display coloured connection label
-                        (string label, GUIStyle style) = StylesUtils.ConnectionStyles[this.window.APIStatus];
-                        EditorGUILayout.LabelField(label, style, GUILayout.Width(91f));
-                        //Disable connection when the URL hasn't changed
-                        GUI.enabled = this.window.UIEnabled && !string.IsNullOrEmpty(this.apiURL) && this.apiURL != this.window.Settings.VersionURL;
-                        if (GUILayout.Button(connect, GUILayout.Width(331f)))
+                        if (this.window.APIStatus != BuildToolWindow.BuildAPIStatus.NOT_CONNECTED && this.urlUsed.target)
                         {
-                            //Set on the serialized property
-                            this.versionURL.stringValue = this.apiURL;
-                            //Try to get the build
-                            this.Log("Testing connection to " + this.apiURL);
-                            this.window.GetBuild();
+                            this.versionURL.stringValue = string.Empty;
+                            this.window.ClearBuild();
                         }
-                        GUI.enabled = this.window.UIEnabled;
                     }
-                    EditorGUI.indentLevel--;
+                    else if (!this.urlUsed.target)
+                    {
+                        this.versionURL.stringValue = string.Empty;
+                        this.apiURL = string.Empty;
+                    }
+
+                    using (FadeGroupScope.Enter(this.urlUsed.faded, out bool visible))
+                    {
+                        if (visible)
+                        {
+                            //Get URL
+                            EditorGUI.indentLevel++;
+                            EditorGUIUtility.labelWidth = 110f;
+                            this.apiURL = EditorGUILayout.TextField(url, this.apiURL);
+                            EditorGUIUtility.labelWidth = 0f;
+                            using (HorizontalScope.Enter())
+                            {
+                                //Display coloured connection label
+                                (GUIContent label, GUIStyle style) = StylesUtils.ConnectionStyles[this.window.APIStatus];
+                                EditorGUILayout.LabelField(label, style, labelOptions);
+                                //Disable connection when the URL hasn't changed
+                                GUI.enabled = this.window.UIEnabled && !string.IsNullOrEmpty(this.apiURL) && this.apiURL != this.window.Settings.VersionURL;
+                                if (GUILayout.Button(connect))
+                                {
+                                    //Set on the serialized property
+                                    this.versionURL.stringValue = this.apiURL;
+                                    //Try to get the build
+                                    this.Log("Testing connection to " + this.apiURL);
+                                    this.window.GetBuild();
+                                }
+
+                                GUI.enabled = this.window.UIEnabled;
+                            }
+
+                            EditorGUI.indentLevel--;
+                        }
+                    }
                 }
             }
         }
@@ -221,8 +304,8 @@ namespace UnityBuildTool.UI
                 this.branches = null;
                 //Display info label
                 GUIContent label = branchesNotLoaded ? notLoadedLabel : loadedLabel;
-                float width = EditorStyles.boldLabel.CalcSize(label).x;
-                EditorGUILayout.LabelField(label, EditorStyles.boldLabel, GUILayout.Width(width));
+                GUILayoutOption[] options = branchesNotLoaded ? this.notLoadedLabelOptions : this.loadedLabelOptions;
+                EditorGUILayout.LabelField(label, EditorStyles.boldLabel, options);
                 //Repaint to make sure the change appears as soon as possible
                 this.window.Repaint();
                 return;
@@ -235,10 +318,10 @@ namespace UnityBuildTool.UI
             GUI.enabled = this.window.UIEnabled && this.window.Settings.PublishRelease;
 
             //Header
-            EditorGUILayout.LabelField(header, StylesUtils.TitleLabelStyle, GUILayout.Height(30f), GUILayout.Width(150f));
+            EditorGUILayout.LabelField(header, StylesUtils.TitleLabelStyle, headerOptions);
             EditorGUILayout.Space();
             //Title field
-            this.title = EditorGUILayout.TextField(string.Empty, this.title, StylesUtils.TitleFieldStyle, GUILayout.Height(25f));
+            this.title = EditorGUILayout.TextField(string.Empty, this.title, StylesUtils.TitleFieldStyle, titleOptions);
             EditorGUILayout.Space(EditorGUIUtility.standardVerticalSpacing * 2f);
             using (HorizontalScope.Enter())
             {
@@ -246,7 +329,7 @@ namespace UnityBuildTool.UI
                 GUI.enabled = this.window.UIEnabled && this.window.Settings.PublishRelease;
                 //Branch selector
                 EditorGUIUtility.labelWidth = 45f;
-                this.selectedBranch = EditorGUILayout.Popup(branchSelector, this.selectedBranch, this.branches, GUILayout.Width(175f));
+                this.SelectedBranch = EditorGUILayout.Popup(branchSelector, this.SelectedBranch, this.branches, branchSelectorOptions);
                 //Repository label
                 EditorGUIUtility.labelWidth = 15f;
                 EditorGUILayout.LabelField("in", this.window.Authenticator.CurrentRepository.FullName, EditorStyles.boldLabel);
@@ -254,12 +337,12 @@ namespace UnityBuildTool.UI
 
             EditorGUIUtility.labelWidth = 80f;
             //Last commit on branch label
-            EditorGUILayout.LabelField("Last commit:", $"[{this.CurrentCommit.Sha.Substring(0, 7)}] {this.CurrentCommit.Commit.Message}");
+            EditorGUILayout.LabelField("Last commit:", this.currentCommitMessage);
             EditorGUIUtility.labelWidth = 0f;
             EditorGUILayout.Space();
             //Release description
-            EditorGUILayout.LabelField(descriptionLabel, StylesUtils.DescriptionLabelStyle, GUILayout.Width(100f), GUILayout.Height(30f));
-            this.description = EditorGUILayout.TextArea(this.description, StylesUtils.DescriptionFieldStyle, GUILayout.ExpandHeight(true), GUILayout.ExpandWidth(true));
+            EditorGUILayout.LabelField(descriptionLabel, StylesUtils.DescriptionLabelStyle, descriptionLabelOptions);
+            this.description = EditorGUILayout.TextArea(this.description, StylesUtils.DescriptionFieldStyle, descriptionOptions);
 
             //Display bottom Build UI
             using (HorizontalScope.Enter())
@@ -278,20 +361,20 @@ namespace UnityBuildTool.UI
                     //Version bump settings
                     using (HorizontalScope.Enter())
                     {
-                        EditorGUILayout.LabelField(bumpLabel, GUILayout.Width(109f));
+                        EditorGUILayout.LabelField(bumpLabel, labelOptions);
                         GUI.enabled = false;
-                        EditorGUILayout.TextField(this.window.BuildVersion.GetBumpedVersionString(this.bump), GUILayout.Width(188f));
+                        EditorGUILayout.TextField(this.bumpString, buildVersionOptions);
                         GUI.enabled = this.window.UIEnabled;
-                        this.bump = (VersionBump)EditorGUILayout.EnumPopup(this.bump, StylesUtils.CenteredPopupStyle, GUILayout.Width(70f));
+                        this.bump = (VersionBump)EditorGUILayout.EnumPopup(this.bump, StylesUtils.CenteredPopupStyle, sideButtonOptions);
                     }
 
                     using (HorizontalScope.Enter())
                     {
                         //Output folder field
                         EditorGUIUtility.labelWidth = 110f;
-                        EditorGUILayout.PropertyField(this.outputFolder, outputDirectoryLabel, GUILayout.Width(300f));
+                        EditorGUILayout.PropertyField(this.outputFolder, outputDirectoryLabel, outputFolderOptions);
                         //Browse button
-                        if (GUILayout.Button("Browse...", EditorStyles.miniButton, GUILayout.Width(70f)))
+                        if (GUILayout.Button("Browse...", EditorStyles.miniButton, sideButtonOptions))
                         {
                             //Get relative path to project folder
                             string relative = BuildToolUtils.OpenProjectFolderPanel("Select build folder");
@@ -304,12 +387,12 @@ namespace UnityBuildTool.UI
                     }
 
                     //Target flags selection
-                    this.targetFlags.intValue = (int)(BuildTargetFlags)EditorGUILayout.EnumFlagsField(buildTargetsLabel, (BuildTargetFlags)this.targetFlags.intValue, GUILayout.Width(375f));
+                    this.targetFlags.intValue = (int)(BuildTargetFlags)EditorGUILayout.EnumFlagsField(buildTargetsLabel, (BuildTargetFlags)this.targetFlags.intValue, targetsOptions);
                     EditorGUIUtility.labelWidth = 0f;
                     EditorGUILayout.Space(30f);
                     //Build button
                     GUI.backgroundColor = StylesUtils.Green;
-                    if (GUILayout.Button(buildButton, StylesUtils.BuildButtonStyle, GUILayout.Height(60f), GUILayout.Width(375f)))
+                    if (GUILayout.Button(buildButton, StylesUtils.BuildButtonStyle, buildButtonOptions))
                     {
                         if ((BuildTargetFlags)this.targetFlags.intValue == BuildTargetFlags.None)
                         {
@@ -338,7 +421,7 @@ namespace UnityBuildTool.UI
                     //Copy files and folders panel header
                     EditorGUILayout.LabelField(copyLabel, StylesUtils.CenteredLabelStyle);
                     //List scrollview
-                    using (ScrollViewScope.Enter(ref this.scroll, false, false, GUI.skin.horizontalScrollbar, GUI.skin.verticalScrollbar, EditorStyles.helpBox, GUILayout.Height(200f), GUILayout.MinWidth(400f)))
+                    using (ScrollViewScope.Enter(ref this.scroll, false, false, GUI.skin.horizontalScrollbar, GUI.skin.verticalScrollbar, EditorStyles.helpBox, filesScrollOptions))
                     {
                         int index = 0, toDelete = -1;
                         //List all folders and files to copy
@@ -348,7 +431,7 @@ namespace UnityBuildTool.UI
                             {
                                 //Delete entry button
                                 GUI.backgroundColor = StylesUtils.Red;
-                                if (GUILayout.Button(deleteEntry, StylesUtils.DeleteButtonStyle, GUILayout.Width(20f)))
+                                if (GUILayout.Button(deleteEntry, StylesUtils.DeleteButtonStyle, deleteButtonOptions))
                                 {
                                     //Store index to delete it later (else it breaks the enumeration
                                     toDelete = index;
@@ -366,7 +449,7 @@ namespace UnityBuildTool.UI
 
                                 EditorGUILayout.LabelField(new GUIContent(path, toCopy.stringValue));
                                 toCopy.NextVisible(true); //Location
-                                toCopy.intValue = (int)(BuildItem.CopyLocation)EditorGUILayout.EnumPopup((BuildItem.CopyLocation)toCopy.intValue, GUILayout.Width(100f));
+                                toCopy.intValue = (int)(BuildItem.CopyLocation)EditorGUILayout.EnumPopup((BuildItem.CopyLocation)toCopy.intValue, copyPopupOptions);
                             }
 
                             index++;
@@ -383,7 +466,7 @@ namespace UnityBuildTool.UI
                     using (HorizontalScope.Enter())
                     {
                         //Add file browser
-                        if (GUILayout.Button("Add file...", EditorStyles.miniButton))
+                        if (GUILayout.Button("Add file...", EditorStyles.miniButton, addButtonOptions))
                         {
                             //Get relative path
                             string relative = BuildToolUtils.OpenProjectFilePanel("Select file to copy on build");
@@ -398,8 +481,8 @@ namespace UnityBuildTool.UI
                             }
                         }
 
-                        EditorGUILayout.Space(10f);
-                        if (GUILayout.Button("Add folder...", EditorStyles.miniButton))
+                        GUILayout.Space(20f);
+                        if (GUILayout.Button("Add folder...", EditorStyles.miniButton, addButtonOptions))
                         {
                             //Get relative path
                             string relative = BuildToolUtils.OpenProjectFolderPanel("Select folder to copy on build");

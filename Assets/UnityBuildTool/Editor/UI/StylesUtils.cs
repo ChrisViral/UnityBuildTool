@@ -30,6 +30,21 @@ namespace UnityBuildTool.UI
         public static GUIStyle RefreshButtonStyle { get; }
 
         /// <summary>
+        /// Style for a centered bold label
+        /// </summary>
+        public static GUIStyle CenteredBoldLabel { get; }
+
+        /// <summary>
+        /// Style for the selectable user code
+        /// </summary>
+        public static GUIStyle UserCodeLabel { get; }
+
+        /// <summary>
+        /// Style of the connection request buttons
+        /// </summary>
+        public static GUIStyle ConnectionButtonStyle { get; }
+
+        /// <summary>
         /// Style of the title label of the build handler
         /// </summary>
         public static GUIStyle TitleLabelStyle { get; }
@@ -72,7 +87,7 @@ namespace UnityBuildTool.UI
         /// <summary>
         /// Array containing the GUIStyles of labels indicating the connection of the webservice
         /// </summary>
-        public static ReadOnlyDictionary<BuildAPIStatus, (string, GUIStyle)> ConnectionStyles { get; }
+        public static ReadOnlyDictionary<BuildAPIStatus, (GUIContent label, GUIStyle style)> ConnectionStyles { get; }
         #endregion
 
         #region Constructors
@@ -85,38 +100,74 @@ namespace UnityBuildTool.UI
             RefreshButtonStyle = new GUIStyle(GUI.skin.button)
             {
                 fontStyle = FontStyle.Bold,
-                fontSize = 16,
-                normal = { textColor = Green },
-                active = { textColor = Green }
+                fontSize  = 16,
+                normal    = { textColor = Green },
+                active    = { textColor = Green },
+                hover     = { textColor = Green }
             };
 
-            //Connection label styles
-            ConnectionStyles = new ReadOnlyDictionary<BuildAPIStatus, (string, GUIStyle)>(new Dictionary<BuildAPIStatus, (string, GUIStyle)>(3)
+            //Connection styles
+            CenteredBoldLabel = new GUIStyle(EditorStyles.boldLabel)
             {
-                [BuildAPIStatus.NOT_CONNECTED] = ("Not Connected", EditorStyles.boldLabel),
-                [BuildAPIStatus.ERROR] =         ("Error",         new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = Red } }),
-                [BuildAPIStatus.CONNECTED] =     ("Connected",     new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = Green } })
+                alignment = TextAnchor.MiddleCenter,
+                fontSize  = 14,
+                wordWrap = true
+            };
+
+            //Connection styles
+            UserCodeLabel = new GUIStyle(EditorStyles.boldLabel)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize  = 24
+            };
+
+            ConnectionButtonStyle = new GUIStyle(GUI.skin.button)
+            {
+                fontStyle = FontStyle.Bold,
+                fontSize  = 18,
+                normal    = { textColor = Color.white },
+                active    = { textColor = Color.white },
+                hover     = { textColor = Color.white }
+            };
+
+            //Not connected
+            GUIContent notConnected = new GUIContent("Not Connected");
+            float notConnectedWidth = EditorStyles.boldLabel.CalcSize(notConnected).x;
+
+            //Error
+            GUIContent error = new GUIContent("Error");
+            GUIStyle errorStyle = new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = Red } };
+
+            //Connected
+            GUIContent connected = new GUIContent("Connected");
+            GUIStyle connectedStyle = new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = Green } };
+
+            //Lookup dictionary
+            ConnectionStyles = new ReadOnlyDictionary<BuildAPIStatus, (GUIContent, GUIStyle)>(new Dictionary<BuildAPIStatus, (GUIContent, GUIStyle)>(3)
+            {
+                [BuildAPIStatus.NOT_CONNECTED] = (notConnected, EditorStyles.boldLabel),
+                [BuildAPIStatus.ERROR]         = (error,        errorStyle),
+                [BuildAPIStatus.CONNECTED]     = (connected,    connectedStyle)
             });
 
             //Release styles
             TitleLabelStyle = new GUIStyle(EditorStyles.boldLabel)
             {
-                fontSize = 20,
-                alignment = TextAnchor.MiddleLeft
+                alignment = TextAnchor.MiddleLeft,
+                fontSize  = 20
             };
 
             TitleFieldStyle = new GUIStyle(EditorStyles.textField)
             {
-                fontSize = 16,
+                fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleLeft,
-                fontStyle = FontStyle.Bold
+                fontSize  = 16
             };
 
             DescriptionLabelStyle = new GUIStyle(EditorStyles.boldLabel)
             {
-                fontSize = 14,
-                alignment = TextAnchor.MiddleLeft
-
+                alignment = TextAnchor.MiddleLeft,
+                fontSize  = 14
             };
 
             DescriptionFieldStyle = new GUIStyle(EditorStyles.textArea) { fontSize = 13 };
@@ -128,17 +179,17 @@ namespace UnityBuildTool.UI
             DeleteButtonStyle = new GUIStyle(EditorStyles.miniButton)
             {
                 fontStyle = FontStyle.Bold,
-                normal = { textColor = Color.white },
-                active = { textColor = Color.white }
+                normal    = { textColor = Color.white },
+                active    = { textColor = Color.white }
             };
 
             BuildButtonStyle = new GUIStyle(GUI.skin.button)
             {
                 alignment = TextAnchor.MiddleCenter,
                 fontStyle = FontStyle.Bold,
-                fontSize = 24,
-                normal = { textColor = Color.white },
-                active = { textColor = Color.white }
+                fontSize  = 24,
+                normal    = { textColor = Color.white },
+                active    = { textColor = Color.white }
             };
         }
         #endregion
