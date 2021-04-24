@@ -61,6 +61,9 @@ namespace UnityBuildTool.UI
         }
 
         #region Constants
+        /// <summary>Max length for the displayed path in the to copy window</summary>
+        private const int MAX_PATH_LENGTH = 40;
+
         //GUIContent labels
         private static readonly GUIContent useURL               = new GUIContent("Use Version Service",   "If a webservice hosting the version object should be used");
         private static readonly GUIContent url                  = new GUIContent("Version URL:",          "URL of the web API where the version data is stored");
@@ -72,7 +75,7 @@ namespace UnityBuildTool.UI
         private static readonly GUIContent draftToggle          = new GUIContent("Draft",                 "If the GitHub release should be saved as a draft");
         private static readonly GUIContent publishToggle        = new GUIContent("Publish Release",       "If the release should be published to GitHub or not");
         private static readonly GUIContent devBuildToggle       = new GUIContent("Development Build",     "If the player should be built by Unity as a development build");
-        private static readonly GUIContent bumpLabel            = new GUIContent("Bump:",                  "How to bump the version number");
+        private static readonly GUIContent bumpLabel            = new GUIContent("Version:",              "What will be the new version number");
         private static readonly GUIContent outputDirectoryLabel = new GUIContent("Output Directory:",     "Local path to the directory where the output of the builds should be saved");
         private static readonly GUIContent buildTargetsLabel    = new GUIContent("Build targets:",        "Which platforms the game will be built for");
         private static readonly GUIContent buildButton          = new GUIContent("BUILD",                 "Build the game for the selected targets and release to GitHub");
@@ -201,6 +204,9 @@ namespace UnityBuildTool.UI
                 //Else get it from the file
                 this.window.GetBuildFromFile();
             }
+
+            //Adjust the string after
+            this.bumpString = this.window.BuildVersion.GetBumpedVersionString(this.Bump);
         }
         #endregion
 
@@ -226,7 +232,7 @@ namespace UnityBuildTool.UI
         {
             this.title = this.description = string.Empty;
             this.SelectedBranch = 0;
-            this.bump = VersionBump.Revision;
+            this.Bump = VersionBump.Revision;
             this.prerelease = this.draft = false;
         }
 
@@ -365,7 +371,7 @@ namespace UnityBuildTool.UI
                         GUI.enabled = false;
                         EditorGUILayout.TextField(this.bumpString, buildVersionOptions);
                         GUI.enabled = this.window.UIEnabled;
-                        this.bump = (VersionBump)EditorGUILayout.EnumPopup(this.bump, StylesUtils.CenteredPopupStyle, sideButtonOptions);
+                        this.Bump = (VersionBump)EditorGUILayout.EnumPopup(this.Bump, StylesUtils.CenteredPopupStyle, sideButtonOptions);
                     }
 
                     using (HorizontalScope.Enter())
@@ -442,9 +448,9 @@ namespace UnityBuildTool.UI
                                 toCopy.NextVisible(true); //Path
                                 string path = toCopy.stringValue;
                                 //Make sure the path isn't too long to be displayed
-                                if (path.Length > 40)
+                                if (path.Length > MAX_PATH_LENGTH)
                                 {
-                                    path = path.Substring(0, 37) + "...";
+                                    path = path.Substring(0, MAX_PATH_LENGTH - 3) + "...";
                                 }
 
                                 EditorGUILayout.LabelField(new GUIContent(path, toCopy.stringValue));
