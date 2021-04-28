@@ -90,6 +90,11 @@ namespace UnityBuildTool.UI
         public bool UIEnabled { get; set; }
 
         /// <summary>
+        /// If the window should be repainted
+        /// </summary>
+        public bool MustRepaint { get; set; }
+
+        /// <summary>
         /// Current BuildVersion
         /// </summary>
         public BuildVersion BuildVersion { get; private set; }
@@ -122,11 +127,16 @@ namespace UnityBuildTool.UI
         [MenuItem("Tools/Build Tool")]
         private static void ShowWindow()
         {
-            //Open a new window if none already is
-            if (!Window)
+            //Check if a window exists
+            if (HasOpenInstances<BuildToolWindow>())
             {
-                //Open the window docked to the main panel
-                GetWindow<BuildToolWindow>(WINDOW_TITLE, true, typeof(SceneView));
+                //If so focus it
+                FocusWindowIfItsOpen<BuildToolWindow>();
+            }
+            else
+            {
+                //Else create a new one
+                Window = CreateWindow<BuildToolWindow>(WINDOW_TITLE, typeof(SceneView));
             }
         }
         #endregion
@@ -149,7 +159,7 @@ namespace UnityBuildTool.UI
         /// <summary>
         /// Sets up the connection to GitHub and all the necessary objects
         /// </summary>
-        private void RefreshConnection()
+        public void RefreshConnection()
         {
             //Create SerializedObject for the current settings
             this.SerializedSettings = new SerializedObject(this.Settings);
@@ -423,14 +433,22 @@ namespace UnityBuildTool.UI
         private void Awake()
         {
             //If a window already exists, do not open a new one
-            if (Window)
+            if (Window && Window != this)
+            {
+                Destroy(this);
+            }
+        }
+
+        private void OnEnable()
+        {
+            //If a window already exists, do not open a new one
+            if (Window && Window != this)
             {
                 Destroy(this);
             }
             else
             {
                 //Set the window as this and init the object
-                this.Log("Creating BuildTool window...");
                 Window = this;
                 Init();
             }
@@ -539,6 +557,13 @@ namespace UnityBuildTool.UI
                 EditorUtility.DisplayDialog(this.popupTitle, this.popupContent, "Okay");
                 //Reset clear flag
                 this.clear = false;
+            }
+
+            //Check if a repaint has been requested
+            if (this.MustRepaint)
+            {
+                this.MustRepaint = false;
+                Repaint();
             }
         }
         #endregion

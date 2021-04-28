@@ -187,7 +187,7 @@ namespace UnityBuildTool.UI
             {
                 alignment = TextAnchor.MiddleCenter,
                 fontStyle = FontStyle.Bold,
-                fontSize  = 24,
+                fontSize  = 32,
                 normal    = { textColor = Color.white },
                 active    = { textColor = Color.white }
             };

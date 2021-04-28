@@ -15,8 +15,32 @@ MonoBehaviour:
   buildRepository: ChrisViral/UnityBuildTool
   useWebService: 0
   versionURL: 
-  developmentBuild: 0
   publishRelease: 1
   outputFolder: 
   targetFlags: 0
   copyOnBuild: []
+  buildSettings:
+    standaloneSettings:
+      developmentBuild: 1
+      autoconnectProfiler: 0
+      deepProfiling: 0
+      scriptDebugging: 0
+      waitForDebugger: 0
+      scriptsOnly: 0
+      compressionMethodIndex: 0
+    androidSettings:
+      developmentBuild: 0
+      autoconnectProfiler: 0
+      deepProfiling: 0
+      scriptDebugging: 0
+      waitForDebugger: 0
+      scriptsOnly: 0
+      compressionMethodIndex: 0
+    _iOSSettings:
+      developmentBuild: 0
+      autoconnectProfiler: 0
+      deepProfiling: 0
+      scriptDebugging: 0
+      waitForDebugger: 0
+      scriptsOnly: 0
+      compressionMethodIndex: 0

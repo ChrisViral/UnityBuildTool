@@ -282,4 +282,33 @@ namespace UnityBuildTool.UI
         /// </summary>
         public void Dispose() => EditorGUILayout.EndFoldoutHeaderGroup();
     }
+
+    /// <summary>
+    /// BuildTargetGroup selection scope
+    /// </summary>
+    public class BuildTargetGroupScope : IDisposable
+    {
+        private static readonly IDisposable provider = new BuildTargetGroupScope();
+
+        /// <summary>
+        /// Prevents instantiation
+        /// </summary>
+        private BuildTargetGroupScope() { }
+
+        /// <summary>
+        /// Enters a new BuildTargetGroup scope
+        /// </summary>
+        /// <param name="target">The currently selected target</param>
+        /// <returns>The disposable implementation that exists the scope</returns>
+        public static IDisposable Enter(out BuildTargetGroup target)
+        {
+            target = EditorGUILayout.BeginBuildTargetSelectionGrouping();
+            return provider;
+        }
+
+        /// <summary>
+        /// Exits the latest scope
+        /// </summary>
+        public void Dispose() => EditorGUILayout.EndBuildTargetSelectionGrouping();
+    }
 }

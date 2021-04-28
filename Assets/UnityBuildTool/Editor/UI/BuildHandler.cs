@@ -1,7 +1,7 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using Octokit;
 using UnityBuildTool.Extensions;
+using UnityBuildTool.UI.Settings;
 using UnityEditor;
 using UnityEditor.AnimatedValues;
 using UnityEngine;
@@ -61,61 +61,48 @@ namespace UnityBuildTool.UI
         }
 
         #region Constants
-        /// <summary>Max length for the displayed path in the to copy window</summary>
-        private const int MAX_PATH_LENGTH = 40;
-
         //GUIContent labels
-        private static readonly GUIContent useURL               = new GUIContent("Use Version Service",   "If a webservice hosting the version object should be used");
-        private static readonly GUIContent url                  = new GUIContent("Version URL:",          "URL of the web API where the version data is stored");
-        private static readonly GUIContent connect              = new GUIContent("Connect",               "Connect to this web API to get and post build versions");
-        private static readonly GUIContent header               = new GUIContent("New Build",             "Title of the GitHub release");
-        private static readonly GUIContent descriptionLabel     = new GUIContent("Description",           "Description of the GitHub release (Markdown is supported)");
-        private static readonly GUIContent branchSelector       = new GUIContent("Target",                "Branch to target");
-        private static readonly GUIContent prereleaseToggle     = new GUIContent("Pre-release",           "If this build is a pre-release");
-        private static readonly GUIContent draftToggle          = new GUIContent("Draft",                 "If the GitHub release should be saved as a draft");
-        private static readonly GUIContent publishToggle        = new GUIContent("Publish Release",       "If the release should be published to GitHub or not");
-        private static readonly GUIContent devBuildToggle       = new GUIContent("Development Build",     "If the player should be built by Unity as a development build");
-        private static readonly GUIContent bumpLabel            = new GUIContent("Version:",              "What will be the new version number");
-        private static readonly GUIContent outputDirectoryLabel = new GUIContent("Output Directory:",     "Local path to the directory where the output of the builds should be saved");
-        private static readonly GUIContent buildTargetsLabel    = new GUIContent("Build targets:",        "Which platforms the game will be built for");
-        private static readonly GUIContent buildButton          = new GUIContent("BUILD",                 "Build the game for the selected targets and release to GitHub");
-        private static readonly GUIContent copyLabel            = new GUIContent("Files/Folders to copy", "Files and folders that should be copied over when building the game");
-        private static readonly GUIContent deleteEntry          = new GUIContent("X",                     "Delete this entry to copy on build");
+        private static readonly GUIContent useURL               = new GUIContent("Use Version Service", "If a webservice hosting the version object should be used");
+        private static readonly GUIContent url                  = new GUIContent("Version URL:",        "URL of the web API where the version data is stored");
+        private static readonly GUIContent connect              = new GUIContent("Connect",             "Connect to this web API to get and post build versions");
+        private static readonly GUIContent header               = new GUIContent("New Build",           "Title of the GitHub release");
+        private static readonly GUIContent descriptionLabel     = new GUIContent("Description",         "Description of the GitHub release (Markdown is supported)");
+        private static readonly GUIContent branchSelector       = new GUIContent("Target",              "Branch to target");
+        private static readonly GUIContent prereleaseToggle     = new GUIContent("Pre-release",         "If this build is a pre-release");
+        private static readonly GUIContent draftToggle          = new GUIContent("Draft",               "If the GitHub release should be saved as a draft");
+        private static readonly GUIContent publishToggle        = new GUIContent("Publish to GitHub",   "If the release should be published to GitHub or not");
+        private static readonly GUIContent bumpLabel            = new GUIContent("Version:",            "What will be the new version number");
+        private static readonly GUIContent outputDirectoryLabel = new GUIContent("Output Directory:",   "Local path to the directory where the output of the builds should be saved");
+        private static readonly GUIContent buildTargetsLabel    = new GUIContent("Build targets:",      "Which platforms the game will be built for");
+        private static readonly GUIContent buildButton          = new GUIContent("BUILD",               "Build the game for the selected targets and release to GitHub");
         private static readonly GUIContent loadedLabel          = new GUIContent("Waiting for valid BuildVersion from web API...");
         private static readonly GUIContent notLoadedLabel       = new GUIContent("Waiting for repository data to be loaded...");
 
         //Option arrays
-        private static readonly GUILayoutOption[] selectorOptions         = { GUILayout.Width(425f) };
         private static readonly GUILayoutOption[] labelOptions            = { GUILayout.Width(109f) };
         private static readonly GUILayoutOption[] headerOptions           = { GUILayout.Width(150f), GUILayout.Height(30f) };
         private static readonly GUILayoutOption[] titleOptions            = { GUILayout.Height(25f) };
         private static readonly GUILayoutOption[] branchSelectorOptions   = { GUILayout.Width(175f) };
         private static readonly GUILayoutOption[] descriptionLabelOptions = { GUILayout.Width(100f), GUILayout.Height(30f) };
-        private static readonly GUILayoutOption[] descriptionOptions      = { GUILayout.ExpandHeight(true), GUILayout.ExpandWidth(true) };
+        private static readonly GUILayoutOption[] descriptionOptions      = { GUILayout.MinHeight(150f), GUILayout.ExpandHeight(true), GUILayout.ExpandWidth(true) };
         private static readonly GUILayoutOption[] buildVersionOptions     = { GUILayout.Width(188f) };
         private static readonly GUILayoutOption[] sideButtonOptions       = { GUILayout.Width(70f) };
         private static readonly GUILayoutOption[] outputFolderOptions     = { GUILayout.Width(300f) };
         private static readonly GUILayoutOption[] targetsOptions          = { GUILayout.Width(375f) };
-        private static readonly GUILayoutOption[] buildButtonOptions      = { GUILayout.Width(375f), GUILayout.Height(60f) };
-        private static readonly GUILayoutOption[] filesScrollOptions      = { GUILayout.Width(400f), GUILayout.Height(200f) };
-        private static readonly GUILayoutOption[] deleteButtonOptions     = { GUILayout.Width(20f) };
-        private static readonly GUILayoutOption[] copyPopupOptions        = { GUILayout.Width(100f) };
-        private static readonly GUILayoutOption[] addButtonOptions        = { GUILayout.Width(190f) };
-
+        private static readonly GUILayoutOption[] buildButtonOptions      = { GUILayout.Width(375f), GUILayout.Height(70f) };
         #endregion
 
         #region Fields
         //Objects
         private readonly BuildToolWindow window;
-        private readonly SerializedProperty useWebService, versionURL, publishRelease, developmentBuild, outputFolder, targetFlags, copyOnBuild;
-        private readonly GUILayoutOption[] loadedLabelOptions, notLoadedLabelOptions;
+        private readonly SerializedProperty useWebService, versionURL, publishRelease, developmentBuild, outputFolder, targetFlags;
+        private readonly BuildSettings settings = new BuildSettings();
 
         //GUI Fields
         private readonly AnimBool urlUsed = new AnimBool(false);
         private string title, description, apiURL, currentCommitMessage, bumpString;
         private string[] branches;
         private bool prerelease, draft;
-        private Vector2 scroll;
         #endregion
 
         #region Properties
@@ -154,6 +141,9 @@ namespace UnityBuildTool.UI
         }
 
         private VersionBump bump;
+        /// <summary>
+        /// Current version bump for the next build
+        /// </summary>
         public VersionBump Bump
         {
             get => this.bump;
@@ -166,6 +156,18 @@ namespace UnityBuildTool.UI
                 }
             }
         }
+
+        private GUILayoutOption[] loadedLabelOptions;
+        /// <summary>
+        /// Loaded label layout options
+        /// </summary>
+        private GUILayoutOption[] LoadedLabelOptions => this.loadedLabelOptions ?? (this.loadedLabelOptions = new[] { GUILayout.Width(EditorStyles.boldLabel.CalcSize(loadedLabel).x) });
+
+        private GUILayoutOption[] notLoadedLabelOptions;
+        /// <summary>
+        /// Not loaded label layout options
+        /// </summary>
+        private GUILayoutOption[] NotLoadedLabelOptions => this.notLoadedLabelOptions ?? (this.notLoadedLabelOptions = new[] { GUILayout.Width(EditorStyles.boldLabel.CalcSize(notLoadedLabel).x) });
         #endregion
 
         #region Constructors
@@ -185,14 +187,8 @@ namespace UnityBuildTool.UI
             this.useWebService    = this.window.SerializedSettings.FindProperty(BuildToolSettings.USE_WEB_SERVICE_NAME);
             this.versionURL       = this.window.SerializedSettings.FindProperty(BuildToolSettings.VERSION_URL_NAME);
             this.publishRelease   = this.window.SerializedSettings.FindProperty(BuildToolSettings.PUBLISH_RELEASE_NAME);
-            this.developmentBuild = this.window.SerializedSettings.FindProperty(BuildToolSettings.DEVELOPMENT_BUILD_NAME);
             this.outputFolder     = this.window.SerializedSettings.FindProperty(BuildToolSettings.OUTPUT_FOLDER_NAME);
             this.targetFlags      = this.window.SerializedSettings.FindProperty(BuildToolSettings.TARGET_FLAGS_NAME);
-            this.copyOnBuild      = this.window.SerializedSettings.FindProperty(BuildToolSettings.COPY_ON_BUILD_NAME);
-
-            //Label sizes
-            this.loadedLabelOptions    = new[] { GUILayout.Width(EditorStyles.boldLabel.CalcSize(loadedLabel).x) };
-            this.notLoadedLabelOptions = new[] { GUILayout.Width(EditorStyles.boldLabel.CalcSize(notLoadedLabel).x) };
 
             if (this.window.Settings.UseWebService)
             {
@@ -241,7 +237,7 @@ namespace UnityBuildTool.UI
         /// </summary>
         public void URLSelector()
         {
-            using (HorizontalScope.Enter(selectorOptions))
+            using (HorizontalScope.Enter())
             {
                 using (VerticalScope.Enter())
                 {
@@ -310,7 +306,7 @@ namespace UnityBuildTool.UI
                 this.branches = null;
                 //Display info label
                 GUIContent label = branchesNotLoaded ? notLoadedLabel : loadedLabel;
-                GUILayoutOption[] options = branchesNotLoaded ? this.notLoadedLabelOptions : this.loadedLabelOptions;
+                GUILayoutOption[] options = branchesNotLoaded ? this.NotLoadedLabelOptions : this.LoadedLabelOptions;
                 EditorGUILayout.LabelField(label, EditorStyles.boldLabel, options);
                 //Repaint to make sure the change appears as soon as possible
                 this.window.Repaint();
@@ -351,19 +347,17 @@ namespace UnityBuildTool.UI
             this.description = EditorGUILayout.TextArea(this.description, StylesUtils.DescriptionFieldStyle, descriptionOptions);
 
             //Display bottom Build UI
+            EditorGUILayout.Space(15f);
             using (HorizontalScope.Enter())
             {
                 using (VerticalScope.Enter())
                 {
                     //Prerelease/draft toggles
-                    EditorGUILayout.Space(15f);
                     this.prerelease = EditorGUILayout.ToggleLeft(prereleaseToggle, this.prerelease);
                     this.draft = EditorGUILayout.ToggleLeft(draftToggle, this.draft);
                     GUI.enabled = this.window.UIEnabled;
                     //Publish toggle
                     this.publishRelease.boolValue = EditorGUILayout.ToggleLeft(publishToggle, this.publishRelease.boolValue);
-                    //Dev build toggle
-                    this.developmentBuild.boolValue = EditorGUILayout.ToggleLeft(devBuildToggle, this.developmentBuild.boolValue);
                     //Version bump settings
                     using (HorizontalScope.Enter())
                     {
@@ -395,7 +389,7 @@ namespace UnityBuildTool.UI
                     //Target flags selection
                     this.targetFlags.intValue = (int)(BuildTargetFlags)EditorGUILayout.EnumFlagsField(buildTargetsLabel, (BuildTargetFlags)this.targetFlags.intValue, targetsOptions);
                     EditorGUIUtility.labelWidth = 0f;
-                    EditorGUILayout.Space(30f);
+                    EditorGUILayout.Space();
                     //Build button
                     GUI.backgroundColor = StylesUtils.Green;
                     if (GUILayout.Button(buildButton, StylesUtils.BuildButtonStyle, buildButtonOptions))
@@ -422,88 +416,10 @@ namespace UnityBuildTool.UI
                     GUI.backgroundColor = Color.white;
                 }
 
-                using (VerticalScope.Enter())
-                {
-                    //Copy files and folders panel header
-                    EditorGUILayout.LabelField(copyLabel, StylesUtils.CenteredLabelStyle);
-                    //List scrollview
-                    using (ScrollViewScope.Enter(ref this.scroll, false, false, GUI.skin.horizontalScrollbar, GUI.skin.verticalScrollbar, EditorStyles.helpBox, filesScrollOptions))
-                    {
-                        int index = 0, toDelete = -1;
-                        //List all folders and files to copy
-                        foreach (SerializedProperty toCopy in this.copyOnBuild)
-                        {
-                            using (HorizontalScope.Enter())
-                            {
-                                //Delete entry button
-                                GUI.backgroundColor = StylesUtils.Red;
-                                if (GUILayout.Button(deleteEntry, StylesUtils.DeleteButtonStyle, deleteButtonOptions))
-                                {
-                                    //Store index to delete it later (else it breaks the enumeration
-                                    toDelete = index;
-                                }
-
-                                GUI.backgroundColor = Color.white;
-                                //Entry to copy label
-                                toCopy.NextVisible(true); //Path
-                                string path = toCopy.stringValue;
-                                //Make sure the path isn't too long to be displayed
-                                if (path.Length > MAX_PATH_LENGTH)
-                                {
-                                    path = path.Substring(0, MAX_PATH_LENGTH - 3) + "...";
-                                }
-
-                                EditorGUILayout.LabelField(new GUIContent(path, toCopy.stringValue));
-                                toCopy.NextVisible(true); //Location
-                                toCopy.intValue = (int)(BuildItem.CopyLocation)EditorGUILayout.EnumPopup((BuildItem.CopyLocation)toCopy.intValue, copyPopupOptions);
-                            }
-
-                            index++;
-                        }
-
-                        //If an entry has been marked to delete, delete it now
-                        if (toDelete != -1)
-                        {
-                            this.copyOnBuild.DeleteArrayElementAtIndex(toDelete);
-                        }
-                    }
-
-                    EditorGUILayout.Space(5f);
-                    using (HorizontalScope.Enter())
-                    {
-                        //Add file browser
-                        if (GUILayout.Button("Add file...", EditorStyles.miniButton, addButtonOptions))
-                        {
-                            //Get relative path
-                            string relative = BuildToolUtils.OpenProjectFilePanel("Select file to copy on build");
-                            //If a valid file is selected, add it
-                            if (!string.IsNullOrEmpty(relative) && !this.copyOnBuild.Children().Any(p => p.Contains(BuildItem.PATH_NAME, relative)))
-                            {
-                                //Increment size and set at the end
-                                this.copyOnBuild.arraySize++;
-                                SerializedProperty item = this.copyOnBuild.GetArrayElementAtIndex(this.copyOnBuild.arraySize - 1);
-                                item.NextVisible(true); //Path
-                                item.stringValue = relative;
-                            }
-                        }
-
-                        GUILayout.Space(20f);
-                        if (GUILayout.Button("Add folder...", EditorStyles.miniButton, addButtonOptions))
-                        {
-                            //Get relative path
-                            string relative = BuildToolUtils.OpenProjectFolderPanel("Select folder to copy on build");
-                            //If a valid folder is selected, add it
-                            if (!string.IsNullOrEmpty(relative) && !this.copyOnBuild.Children().Any(p => p.Contains(BuildItem.PATH_NAME, relative)))
-                            {
-                                //Increment size and set at the end
-                                this.copyOnBuild.arraySize++;
-                                SerializedProperty item = this.copyOnBuild.GetArrayElementAtIndex(this.copyOnBuild.arraySize - 1);
-                                item.NextVisible(true); //Path
-                                item.stringValue = relative;
-                            }
-                        }
-                    }
-                }
+                //Included files box
+                EditorGUIUtility.labelWidth = 170f;
+                this.settings.OnGUI();
+                EditorGUIUtility.labelWidth = 0f;
             }
             EditorGUILayout.Space(15f);
         }

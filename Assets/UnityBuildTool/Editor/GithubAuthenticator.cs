@@ -85,11 +85,17 @@ namespace UnityBuildTool
             Sort      = RepositorySort.FullName,
             Type      = RepositoryType.All
         };
-        /// <summary>Path to the credentials file location on the disk</summary>
-        private static readonly string filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "UnityBuildTool", fileName);
         /// <summary>Unique Entropy used to encrypt the token to the disk</summary>
         private static readonly byte[] entropy;
 
+        /// <summary>
+        /// Credentials folder location on disk
+        /// </summary>
+        public static string CredentialsFolder { get; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "UnityBuildTool");
+        /// <summary>
+        /// Path to the credentials file location on the disk
+        /// </summary>
+        public static string CredentialsFilePath { get; } = Path.Combine(CredentialsFolder, fileName);
         #endregion
 
         #region Fields
@@ -104,13 +110,13 @@ namespace UnityBuildTool
         /// </summary>
         private static string Token
         {
-            get => Encoding.ASCII.GetString(ProtectedData.Unprotect(File.ReadAllBytes(filePath), entropy, DataProtectionScope.CurrentUser));
+            get => Encoding.ASCII.GetString(ProtectedData.Unprotect(File.ReadAllBytes(CredentialsFilePath), entropy, DataProtectionScope.CurrentUser));
             set
             {
                 //Make sure the folder exists
-                Directory.GetParent(filePath)?.Create();
+                Directory.GetParent(CredentialsFilePath)?.Create();
                 //Save the token
-                File.WriteAllBytes(filePath, ProtectedData.Protect(Encoding.ASCII.GetBytes(value), entropy, DataProtectionScope.CurrentUser));
+                File.WriteAllBytes(CredentialsFilePath, ProtectedData.Protect(Encoding.ASCII.GetBytes(value), entropy, DataProtectionScope.CurrentUser));
             }
         }
         #endregion
@@ -132,6 +138,7 @@ namespace UnityBuildTool
             {
                 this.status = value;
                 this.window.UIEnabled = true;
+                this.window.MustRepaint = true;
             }
         }
 
@@ -229,7 +236,7 @@ namespace UnityBuildTool
 
             this.setup = true;
             //Tries to load the user's credentials
-            if (File.Exists(filePath))
+            if (File.Exists(CredentialsFilePath))
             {
                 this.Log("Loading user credentials...\n");
                 try
@@ -245,9 +252,9 @@ namespace UnityBuildTool
                     //If any error whatsoever happens, assume the credentials are bad or nonexistent and ask them from the user
                     this.LogWarning("Could not get valid credentials from disk");
                     //Delete existing credentials if they are on the disk
-                    if (File.Exists(filePath))
+                    if (File.Exists(CredentialsFilePath))
                     {
-                        File.Delete(filePath);
+                        File.Delete(CredentialsFilePath);
                         this.Log("Deleting credentials file from disk");
                     }
                 }
@@ -281,7 +288,6 @@ namespace UnityBuildTool
                 //Store user code and verification URL
                 this.UserCode = response.userCode;
                 this.VerificationURL = response.verificationUrl;
-                this.window.UIEnabled = true;
 
                 //Start verification process
                 this.Status = ConnectionStatus.AWAITING_VERIFICATION;
@@ -320,9 +326,9 @@ namespace UnityBuildTool
                 this.Status = ConnectionStatus.BAD_TOKEN;
 
                 //Delete existing credentials if they are on the disk
-                if (File.Exists(filePath))
+                if (File.Exists(CredentialsFilePath))
                 {
-                    File.Delete(filePath);
+                    File.Delete(CredentialsFilePath);
                     this.Log("Deleting credentials file from disk");
                 }
             }

@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using UnityBuildTool.UI.Settings;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -35,6 +37,7 @@ namespace UnityBuildTool
             }
 
             //Get original info in main thread
+            bool waitForDebugger = EditorUserBuildSettings.waitForManagedDebugger;
             BuildTarget originalTarget = EditorUserBuildSettings.activeBuildTarget;
             string[] scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
 
@@ -52,7 +55,8 @@ namespace UnityBuildTool
 
                 try
                 {
-                    Build(settings, target, scenes);
+                    BuildTargetGroupSettings targetSettings = settings.BuildSettings.GetTargetGroupSettings(BuildPipeline.GetBuildTargetGroup(target));
+                    Build(settings, target, scenes, targetSettings);
                     success[current] = true;
                 }
                 catch (BuildFailedException e)
@@ -69,6 +73,7 @@ namespace UnityBuildTool
             {
                 EditorUserBuildSettings.SwitchActiveBuildTargetAsync(BuildPipeline.GetBuildTargetGroup(originalTarget), originalTarget);
             }
+            EditorUserBuildSettings.waitForManagedDebugger = waitForDebugger;
         }
 
         /// <summary>
@@ -77,19 +82,24 @@ namespace UnityBuildTool
         /// <param name="settings">Settings to build for</param>
         /// <param name="target">Target to build</param>
         /// <param name="scenes">Array of scenes to include in the build</param>
+        /// <param name="targetSettings">Settings specific for the currently build target group</param>
         /// <exception cref="BuildFailedException">If the build failed for any reason</exception>
-        public static void Build(BuildToolSettings settings, BuildTarget target, string[] scenes)
+        public static void Build(BuildToolSettings settings, BuildTarget target, string[] scenes, BuildTargetGroupSettings targetSettings)
         {
             //Get some info on the build
             string targetName = BuildToolUtils.GetBuildTargetName(target);
             string parentDirectory = Path.Combine(BuildToolUtils.ProjectFolderPath, settings.OutputFolder, targetName);
+            if (targetSettings != null)
+            {
+                EditorUserBuildSettings.waitForManagedDebugger = targetSettings.waitForDebugger;
+            }
             //Create the build options
             BuildPlayerOptions options = new BuildPlayerOptions
             {
                 scenes = scenes,
                 locationPathName = Path.Combine(parentDirectory, BuildToolUtils.ProductName),
                 target = target,
-                options = settings.DevelopmentBuild ? BuildOptions.Development : BuildOptions.None
+                options = targetSettings?.Options ?? BuildOptions.None
             };
             //If on Windows, must add extension manually
             if (target == BuildTarget.StandaloneWindows || target == BuildTarget.StandaloneWindows64)

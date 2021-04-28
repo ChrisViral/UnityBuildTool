@@ -1,5 +1,9 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Reflection;
+using UnityBuildTool.UI;
+using UnityBuildTool.UI.Settings;
 using UnityEditor;
 using UnityEngine;
 
@@ -22,24 +26,24 @@ namespace UnityBuildTool
             private SerializedProperty buildRepository;
             private SerializedProperty useWebService;
             private SerializedProperty versionURL;
-            private SerializedProperty developmentBuild;
             private SerializedProperty publishRelease;
             private SerializedProperty outputFolder;
             private SerializedProperty targetFlags;
             private SerializedProperty copyOnBuild;
+            private SerializedProperty buildSettings;
             #endregion
 
             #region Methods
             private void OnEnable()
             {
-                this.buildRepository  = this.serializedObject.FindProperty(BUILD_REPOSITORY_NAME);
-                this.useWebService    = this.serializedObject.FindProperty(USE_WEB_SERVICE_NAME);
-                this.versionURL       = this.serializedObject.FindProperty(VERSION_URL_NAME);
-                this.developmentBuild = this.serializedObject.FindProperty(DEVELOPMENT_BUILD_NAME);
-                this.publishRelease   = this.serializedObject.FindProperty(PUBLISH_RELEASE_NAME);
-                this.outputFolder     = this.serializedObject.FindProperty(OUTPUT_FOLDER_NAME);
-                this.targetFlags      = this.serializedObject.FindProperty(TARGET_FLAGS_NAME);
-                this.copyOnBuild      = this.serializedObject.FindProperty(COPY_ON_BUILD_NAME);
+                this.buildRepository = this.serializedObject.FindProperty(BUILD_REPOSITORY_NAME);
+                this.useWebService  = this.serializedObject.FindProperty(USE_WEB_SERVICE_NAME);
+                this.versionURL     = this.serializedObject.FindProperty(VERSION_URL_NAME);
+                this.publishRelease = this.serializedObject.FindProperty(PUBLISH_RELEASE_NAME);
+                this.outputFolder   = this.serializedObject.FindProperty(OUTPUT_FOLDER_NAME);
+                this.targetFlags    = this.serializedObject.FindProperty(TARGET_FLAGS_NAME);
+                this.copyOnBuild    = this.serializedObject.FindProperty(COPY_ON_BUILD_NAME);
+                this.buildSettings  = this.serializedObject.FindProperty(BUILD_SETTINGS_NAME);
             }
 
             /// <summary>
@@ -51,18 +55,39 @@ namespace UnityBuildTool
                 EditorGUILayout.PropertyField(this.buildRepository);
                 EditorGUILayout.PropertyField(this.useWebService);
                 EditorGUILayout.PropertyField(this.versionURL);
-                EditorGUILayout.PropertyField(this.developmentBuild);
                 EditorGUILayout.PropertyField(this.publishRelease);
                 EditorGUILayout.PropertyField(this.outputFolder);
                 //Except for the flags on
                 this.targetFlags.intValue = (int)(BuildTargetFlags)EditorGUILayout.EnumFlagsField("Target Flags", (BuildTargetFlags)this.targetFlags.intValue);
                 //And back to normal
                 EditorGUILayout.PropertyField(this.copyOnBuild, true);
+                EditorGUILayout.PropertyField(this.buildSettings, true);
+
+                //Open credentials file location
+                if (GUILayout.Button("Open Credentials File Location", EditorStyles.miniButtonMid))
+                {
+                    Process.Start(GitHubAuthenticator.CredentialsFolder);
+                }
+
+                //Delete credentials
+                if (GUILayout.Button("Delete Credentials", EditorStyles.miniButtonMid))
+                {
+                    //Ask confirmation
+                    if (EditorUtility.DisplayDialog("Delete Credentials", "Are you sure you wish to delete your credentials from the disk?\n\nThis will not remove the OAuth authorization.", "Yes", "No"))
+                    {
+                        //Delete file, and if the window is open, refresh the connection
+                        File.Delete(GitHubAuthenticator.CredentialsFilePath);
+                        if (EditorWindow.HasOpenInstances<BuildToolWindow>())
+                        {
+                            BuildToolWindow.Window.RefreshConnection();
+                        }
+                    }
+                }
 
                 if (this.serializedObject.hasModifiedProperties)
                 {
-                    //Apply everything
-                    this.serializedObject.ApplyModifiedProperties();
+                    //Apply everything if needed
+                    this.serializedObject.ApplyModifiedPropertiesWithoutUndo();
                 }
             }
             #endregion
@@ -77,8 +102,6 @@ namespace UnityBuildTool
         public const string USE_WEB_SERVICE_NAME   = nameof(useWebService);
         /// <summary>Name of the VersionURL SerializedProperty</summary>
         public const string VERSION_URL_NAME       = nameof(versionURL);
-        /// <summary>Name of the DevelopmentBuild SerializedProperty</summary>
-        public const string DEVELOPMENT_BUILD_NAME = nameof(developmentBuild);
         /// <summary>Name of the PublishRelease SerializedProperty</summary>
         public const string PUBLISH_RELEASE_NAME   = nameof(publishRelease);
         /// <summary>Name of the OutputFolder SerializedProperty</summary>
@@ -87,6 +110,8 @@ namespace UnityBuildTool
         public const string TARGET_FLAGS_NAME      = nameof(targetFlags);
         /// <summary>Name of the CopyOnBuild SerializedProperty</summary>
         public const string COPY_ON_BUILD_NAME     = nameof(copyOnBuild);
+        /// <summary>Name of the BuildSettings SerializedProperty</summary>
+        public const string BUILD_SETTINGS_NAME    = nameof(buildSettings);
         #endregion
 
         #region Properties
@@ -110,13 +135,6 @@ namespace UnityBuildTool
         /// The URL of the hosted Version API
         /// </summary>
         public string VersionURL => this.versionURL;
-
-        [SerializeField]
-        private bool developmentBuild;
-        /// <summary>
-        /// If the build to do must be a development build or not
-        /// </summary>
-        public bool DevelopmentBuild => this.developmentBuild;
 
         [SerializeField]
         private bool publishRelease = true;
@@ -145,6 +163,13 @@ namespace UnityBuildTool
         /// List of files and folders to copy on build
         /// </summary>
         public List<BuildItem> CopyOnBuild => this.copyOnBuild;
+
+        [SerializeField]
+        private BuildSettings buildSettings = new BuildSettings();
+        /// <summary>
+        /// The build settings for all platforms
+        /// </summary>
+        public BuildSettings BuildSettings => this.buildSettings;
         #endregion
 
         #region Static methods
